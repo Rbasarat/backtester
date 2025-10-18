@@ -1,0 +1,22 @@
+---
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "queries/"
+    schema: "schema/"
+    gen:
+      go:
+        package: "sqlc"
+        out: "generated"
+        sql_package: "pgx/v5"
+        emit_interface: true
+        overrides:
+          - db_type: "pg_catalog.numeric"
+            go_type:
+              import: "github.com/shopspring/decimal"
+              type: "Decimal"
+          - db_type: "timestamptz"
+            go_type:
+              import: "time"
+              type: "Time"
+              pointer: true
