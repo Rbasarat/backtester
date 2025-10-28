@@ -8,7 +8,7 @@ import (
 )
 
 // GetAssetByTicker retrieves an types.Asset by its ticker symbol.
-func (db *Database) GetAssetByTicker(ctx context.Context, ticker string) (*types.Asset, error) {
+func (db *Database) GetAssetByTicker(ticker string, ctx context.Context) (*types.Asset, error) {
 	asset, err := db.assets.GetAssetByTicker(ctx, ticker)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
