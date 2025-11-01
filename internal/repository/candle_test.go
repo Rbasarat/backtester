@@ -46,25 +46,25 @@ func TestDatabase_GetCandles(t *testing.T) {
 					sqlError: tt.sqlErr,
 				},
 			}
-			got, err := db.GetCandles(tt.args.assetId, tt.args.interval, tt.args.start, tt.args.end, context.Background())
+			got, err := db.GetAggregates(tt.args.assetId, tt.args.interval, tt.args.start, tt.args.end, context.Background())
 
 			if err != nil {
 				if !errors.Is(err, tt.wantErr) {
-					t.Errorf("GetCandles() error = %v, wantErr %v", err, tt.wantErr)
+					t.Errorf("GetAggregates() error = %v, wantErr %v", err, tt.wantErr)
 				}
 				return
 			}
 			for i := 0; i < len(tt.want); i++ {
 				if got[i].AssetId != tt.args.assetId {
-					t.Errorf("GetCandles() %s assetId got = %v, want %v", got[i].Timestamp, got[i].AssetId, tt.want[i].AssetId)
+					t.Errorf("GetAggregates() %s assetId got = %v, want %v", got[i].Timestamp, got[i].AssetId, tt.want[i].AssetId)
 					break
 				}
 				if got[i].Interval != tt.args.interval {
-					t.Errorf("GetCandles() %s interval got = %v, want %v", got[i].Timestamp, got[i].Interval, tt.want[i].Interval)
+					t.Errorf("GetAggregates() %s interval got = %v, want %v", got[i].Timestamp, got[i].Interval, tt.want[i].Interval)
 					break
 				}
 				if !got[i].High.Equal(tt.want[i].High) {
-					t.Errorf("GetCandles() %s high got = %v, want %v", got[i].Timestamp, got[i].High, tt.want[i].High)
+					t.Errorf("GetAggregates() %s high got = %v, want %v", got[i].Timestamp, got[i].High, tt.want[i].High)
 					break
 				}
 			}

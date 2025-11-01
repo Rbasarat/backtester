@@ -16,7 +16,7 @@ var bucketToInterval = map[types.Interval]string{
 	types.Day:           "1 day",
 }
 
-func (db *Database) GetCandles(assetId int, interval types.Interval, start, end time.Time, ctx context.Context) ([]types.Candle, error) {
+func (db *Database) GetAggregates(assetId int, interval types.Interval, start, end time.Time, ctx context.Context) ([]types.Candle, error) {
 	bucket, ok := bucketToInterval[interval]
 	if !ok {
 		return nil, ErrIntervalNotSupported

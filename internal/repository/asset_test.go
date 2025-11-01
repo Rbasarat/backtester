@@ -35,7 +35,7 @@ func TestDatabase_GetAssetByTicker(t *testing.T) {
 					sqlError: tt.sqlcErr,
 				},
 			}
-			got, err := db.GetAssetByTicker(context.Background(), tt.args.ticker)
+			got, err := db.GetAssetByTicker(tt.args.ticker, context.Background())
 			if err != nil {
 				if !errors.Is(err, ErrAssetNotFound) {
 					t.Errorf("GetAssetByTicker() error = %v, wantErr %v", err, tt.wantErr)

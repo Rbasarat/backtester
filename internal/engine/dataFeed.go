@@ -1,9 +1,7 @@
 package engine
 
 import (
-	"backtester/internal/repository"
 	"backtester/types"
-	"context"
 	"time"
 )
 
@@ -12,17 +10,15 @@ type DataFeed struct {
 	Interval types.Interval
 	Start    time.Time
 	End      time.Time
+	candles  []types.Candle
 }
 
-func (df *DataFeed) GetData(db repository.Database) ([]types.Candle, error) {
-	ctx := context.Background()
-	ticker, err := db.GetAssetByTicker(df.Ticker, ctx)
-	if err != nil {
-		return nil, err
+func NewDataFeed(ticker string, interval types.Interval, start, end time.Time) *DataFeed {
+	return &DataFeed{
+		Ticker:   ticker,
+		Interval: interval,
+		Start:    start,
+		End:      end,
+		candles:  []types.Candle{},
 	}
-	candles, err := db.GetCandles(ticker.Id, df.Interval, df.Start, df.End, ctx)
-	if err != nil {
-		return nil, err
-	}
-	return candles, nil
 }
