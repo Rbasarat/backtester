@@ -1,21 +1,77 @@
 package main
 
 import (
-  "fmt"
+	"backtester/internal/engine"
+	"backtester/internal/repository"
+	"backtester/types"
+	"context"
+	"fmt"
+	"github.com/shopspring/decimal"
+	"log"
+	"time"
 )
 
-//TIP <p>To run your code, right-click the code and select <b>Run</b>.</p> <p>Alternatively, click
-// the <icon src="AllIcons.Actions.Execute"/> icon in the gutter and select the <b>Run</b> menu item from here.</p>
+const (
+	dburl  = "postgresql://moneymaker:moneymaker@localhost:5432/moneymaker"
+	ticker = "AAPL"
+)
 
 func main() {
-  //TIP <p>Press <shortcut actionId="ShowIntentionActions"/> when your caret is at the underlined text
-  // to see how GoLand suggests fixing the warning.</p><p>Alternatively, if available, click the lightbulb to view possible fixes.</p>
-  s := "gopher"
-  fmt.Printf("Hello and welcome, %s!\n", s)
+	db, err := repository.NewDatabase(dburl)
+	if err != nil {
+		log.Fatal(err)
+	}
+	ctx := context.Background()
+	asset, err := db.GetAssetByTicker(ticker, ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(asset)
+	fmt.Println("-------")
 
-  for i := 1; i <= 5; i++ {
-	//TIP <p>To start your debugging session, right-click your code in the editor and select the Debug option.</p> <p>We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-	// for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.</p>
-	fmt.Println("i =", 100/i)
-  }
+	start := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2022, 1, 10, 0, 0, 0, 0, time.UTC)
+	//candles, err := db.GetAggregates(98413, types.Day, start, end, ctx)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//for _, candle := range candles {
+	//	fmt.Println(candle)
+	//}
+	feeds := []*engine.DataFeedConfig{
+		engine.NewDataFeed("AAPL", types.Day, start, end),
+	}
+	eng := engine.NewEngine(
+		feeds,
+		strat{},
+		allo{},
+		broker{},
+		engine.NewPortfolioConfig(decimal.NewFromInt(1000)),
+		&db,
+	)
+	eng.Run()
+
+}
+
+type strat struct {
+}
+
+func (s strat) Init(api engine.PortfolioApi) error {
+	return nil
+}
+
+func (s strat) OnCandle(candle types.Candle) []types.Signal {
+	return nil
+}
+
+type allo struct{}
+
+func (a allo) Allocate(signals []types.Signal, view types.PortfolioView) []types.Order {
+	return nil
+}
+
+type broker struct{}
+
+func (b broker) Execute(orders []types.Order) {
+
 }

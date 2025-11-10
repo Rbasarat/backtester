@@ -2,58 +2,62 @@ package engine
 
 import (
 	"backtester/types"
-	"sync"
 	"time"
 )
 
 type backtester struct {
-	curTime  time.Time
-	start    time.Time
-	end      time.Time
-	feeds    []*DataFeed
-	strategy strategy
+	feeds     []*DataFeedConfig
+	strategy  strategy
+	allocator allocator
+	broker    broker
+	portfolio *types.Portfolio
+
+	start     time.Time
+	curTime   time.Time
+	end       time.Time
+	feedIndex map[string]int
 }
 
-func newBacktester(feeds []*DataFeed, strat strategy) *backtester {
+func newBacktester(feeds []*DataFeedConfig, strat strategy, sizing allocator, broker broker, portfolio *types.Portfolio) *backtester {
 	start, end := getGlobalTimeRange(feeds)
 	return &backtester{
-		start:    start,
-		end:      end,
-		curTime:  start,
-		feeds:    feeds,
-		strategy: strat,
+		start:     start,
+		end:       end,
+		curTime:   start,
+		feeds:     feeds,
+		strategy:  strat,
+		allocator: sizing,
+		broker:    broker,
+		portfolio: portfolio,
+		feedIndex: make(map[string]int),
 	}
 }
 
-func (e *backtester) run() error {
-	feedCursor := make(map[string]int)
-
-	wg := &sync.WaitGroup{}
-	for !e.curTime.After(e.end) {
-		for _, feed := range e.feeds {
-			i := feedCursor[feed.Ticker]
+func (b *backtester) run() error {
+	for !b.curTime.After(b.end) {
+		var signals []types.Signal
+		for _, feed := range b.feeds {
+			i := b.feedIndex[feed.Ticker]
 			if i >= len(feed.candles) {
 				continue
 			}
 			curCandle := feed.candles[i]
-			if curCandle.Timestamp.Equal(e.curTime) {
-				wg.Add(1)
-				go func(candle types.Candle) {
-					defer wg.Done()
-					e.strategy.OnCandle(candle)
-				}(curCandle)
-				feedCursor[feed.Ticker]++
+			if curCandle.Timestamp.Equal(b.curTime) {
+				signals = append(signals, b.strategy.OnCandle(curCandle)...)
+				b.feedIndex[feed.Ticker]++
 			}
 		}
-		wg.Wait()
+
+		orders := b.allocator.Allocate(signals, b.portfolio.GetPortfolioSnapshot())
+		b.broker.Execute(orders)
 
 		// We use time.Minute here because the lowest timeframe we have is minute
-		e.curTime = e.curTime.Add(time.Minute)
+		b.curTime = b.curTime.Add(time.Minute)
 	}
 	return nil
 }
 
-func getGlobalTimeRange(feeds []*DataFeed) (time.Time, time.Time) {
+func getGlobalTimeRange(feeds []*DataFeedConfig) (time.Time, time.Time) {
 	if len(feeds) == 0 {
 		return time.UnixMilli(0), time.UnixMilli(0)
 	}

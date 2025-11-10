@@ -3,23 +3,28 @@ package engine
 import (
 	"backtester/types"
 	"context"
-	"time"
 )
-
-type dataStore interface {
-	GetAssetByTicker(ticker string, ctx context.Context) (*types.Asset, error)
-	GetAggregates(assetId int, interval types.Interval, start, end time.Time, ctx context.Context) ([]types.Candle, error)
-}
 
 type Engine struct {
 	db         dataStore
+	feeds      []*DataFeedConfig
+	strategy   strategy
+	allocator  allocator
+	broker     broker
+	portfolio  *types.Portfolio
 	backtester *backtester
 }
 
-func NewEngine(feeds []*DataFeed, strat strategy, db dataStore) *Engine {
+func NewEngine(feeds []*DataFeedConfig, strat strategy, sizer allocator, broker broker, wallet *PortfolioConfig, db dataStore) *Engine {
+	newPortfolio := types.NewPortfolio(wallet.InitialCash)
 	return &Engine{
 		db:         db,
-		backtester: newBacktester(feeds, strat),
+		feeds:      feeds,
+		strategy:   strat,
+		allocator:  sizer,
+		broker:     broker,
+		portfolio:  newPortfolio,
+		backtester: newBacktester(feeds, strat, sizer, broker, newPortfolio),
 	}
 }
 

@@ -9,24 +9,44 @@ import (
 	"time"
 )
 
+var testInterval = types.OneMinute
+
+func TestBacktest_BacktesterCallsAllocatorAndBroker(t *testing.T) {
+	testStrat := allocatorStrategy{}
+	testAllocator := &mockAllocator{}
+	testBroker := &mockBroker{}
+	engine := mockEngine(&testStrat, mockFeed(), testAllocator, testBroker)
+
+	engine.Run()
+	// We always call the allocator even if we have 0 signals
+	if testAllocator.callCount != 6 {
+		t.Errorf("Allocator called %d times, want %d", testAllocator.callCount, 6)
+	}
+	// We always call the broker even if we have 0 signals
+	if testBroker.callCount != 6 {
+		t.Errorf("Broker called %d times, want %d", testBroker.callCount, 6)
+	}
+
+}
+
 func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 	base := time.UnixMilli(0).UTC()
 	newTime := func(i int) time.Time { return base.Add(time.Duration(i) * time.Minute) }
 	tests := []struct {
 		name        string
-		feeds       []*DataFeed
+		feeds       []*DataFeedConfig
 		wantCandles map[time.Time][]types.Candle
 	}{
 		{
 			name: "feed with no candles",
-			feeds: []*DataFeed{
+			feeds: []*DataFeedConfig{
 				{Ticker: "A", Start: newTime(0), End: newTime(2), candles: nil},
 			},
 			wantCandles: map[time.Time][]types.Candle{},
 		},
 		{
 			name: "all feeds send same timestamp per tick",
-			feeds: []*DataFeed{
+			feeds: []*DataFeedConfig{
 				{
 					Ticker: "A",
 					Start:  newTime(0),
@@ -45,7 +65,7 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 		},
 		{
 			name: "one feed is subset of max range",
-			feeds: []*DataFeed{
+			feeds: []*DataFeedConfig{
 				{
 					Ticker: "A",
 					Start:  newTime(0),
@@ -71,7 +91,7 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 		},
 		{
 			name: "two feeds send same timestamp per tick",
-			feeds: []*DataFeed{
+			feeds: []*DataFeedConfig{
 				{
 					Ticker: "A",
 					Start:  newTime(0),
@@ -99,7 +119,7 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 		},
 		{
 			name: "irregular intervals vs dense feed",
-			feeds: []*DataFeed{
+			feeds: []*DataFeedConfig{
 				{Ticker: "A", Start: newTime(0), End: newTime(5),
 					candles: []types.Candle{
 						mockCandle(1, newTime(0)), mockCandle(1, newTime(3)), mockCandle(1, newTime(5)),
@@ -123,7 +143,7 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 		},
 		{
 			name: "one feed overlaps the other",
-			feeds: []*DataFeed{
+			feeds: []*DataFeedConfig{
 				{
 					Ticker: "A",
 					Start:  newTime(0),
@@ -154,8 +174,12 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sp := newCandlesParallelismStrategy()
-			engine := mockEngine(sp, tt.feeds)
+			testAllocator := &mockAllocator{}
+			testBroker := &mockBroker{}
+			engine := mockEngine(sp, tt.feeds, testAllocator, testBroker)
+
 			gotCandles := make(map[time.Time][]types.Candle)
+			// We do it like this because we want to verify that the candle timestamp == curTime in the backtest loop
 			go func() {
 				for candle := range sp.sent {
 					gotCandles[engine.backtester.curTime] = append(gotCandles[engine.backtester.curTime], candle)
@@ -185,7 +209,10 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 
 func TestBacktest_ShouldSendCandlesInOrder(t *testing.T) {
 	testStrat := candlesReceivedStrategy{}
-	engine := mockEngine(&testStrat, mockFeed())
+	testAllocator := &mockAllocator{}
+	testBroker := &mockBroker{}
+	engine := mockEngine(&testStrat, mockFeed(), testAllocator, testBroker)
+
 	err := engine.Run()
 	if err != nil {
 		t.Errorf("Error running engine: %v", err)
@@ -204,25 +231,25 @@ func TestBacktest_getGlobalTimeRange(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		args      []*DataFeed
+		args      []*DataFeedConfig
 		wantStart time.Time
 		wantEnd   time.Time
 	}{
 		{
 			name:      "should return 0",
-			args:      []*DataFeed{},
+			args:      []*DataFeedConfig{},
 			wantStart: time.UnixMilli(0),
 			wantEnd:   time.UnixMilli(0),
 		},
 		{
 			name:      "should find min and max in first feed",
-			args:      []*DataFeed{NewDataFeed("AAPL", testInterval, time.UnixMilli(1), time.UnixMilli(2))},
+			args:      []*DataFeedConfig{NewDataFeed("AAPL", testInterval, time.UnixMilli(1), time.UnixMilli(2))},
 			wantStart: time.UnixMilli(1),
 			wantEnd:   time.UnixMilli(2),
 		},
 		{
 			name: "should find min in first and max in second feed",
-			args: []*DataFeed{
+			args: []*DataFeedConfig{
 				NewDataFeed("AAPL", testInterval, time.UnixMilli(1), time.UnixMilli(2)),
 				NewDataFeed("AAPL", testInterval, time.UnixMilli(1), time.UnixMilli(3)),
 			},
@@ -231,7 +258,7 @@ func TestBacktest_getGlobalTimeRange(t *testing.T) {
 		},
 		{
 			name: "should find min in second and max in first feed",
-			args: []*DataFeed{
+			args: []*DataFeedConfig{
 				NewDataFeed("AAPL", testInterval, time.UnixMilli(3), time.UnixMilli(6)),
 				NewDataFeed("AAPL", testInterval, time.UnixMilli(1), time.UnixMilli(2)),
 			},
@@ -252,20 +279,36 @@ func TestBacktest_getGlobalTimeRange(t *testing.T) {
 	}
 }
 
-var testInterval = types.OneMinute
-
 // ----------------Helper functions----------------
-func mockFeed() []*DataFeed {
-	return []*DataFeed{NewDataFeed(
+func mockFeed() []*DataFeedConfig {
+	return []*DataFeedConfig{NewDataFeed(
 		"AAPL",
 		testInterval,
 		time.UnixMilli(0),
 		time.UnixMilli(0).Add(types.IntervalToTime[testInterval]*time.Duration(5)),
 	)}
 }
-func mockEngine(strat strategy, feed []*DataFeed) *Engine {
+func mockEngine(strat strategy, feed []*DataFeedConfig, allocator allocator, broker broker) *Engine {
 	db := mockDb{}
-	return NewEngine(feed, strat, db)
+	portfolio := NewPortfolioConfig(decimal.NewFromInt(1000))
+	return NewEngine(feed, strat, allocator, broker, portfolio, db)
+}
+
+type mockBroker struct {
+	callCount int
+}
+
+func (m *mockBroker) Execute(orders []types.Order) {
+	m.callCount++
+}
+
+type mockAllocator struct {
+	callCount int
+}
+
+func (m *mockAllocator) Allocate(signals []types.Signal, view types.PortfolioView) []types.Order {
+	m.callCount++
+	return nil
 }
 
 type mockDb struct {
@@ -309,30 +352,52 @@ type candlesReceivedStrategy struct {
 	receivedCount   int
 }
 
-func (t *candlesReceivedStrategy) Init(api StrategyAPI) error {
+func (t *candlesReceivedStrategy) Init(api PortfolioApi) error {
 	return nil
 }
-func (t *candlesReceivedStrategy) OnCandle(candle types.Candle) {
+func (t *candlesReceivedStrategy) OnCandle(candle types.Candle) []types.Signal {
 	t.receivedCandles = append(t.receivedCandles, candle)
 	t.receivedCount++
+	return nil
 }
 
 type candlesParallelismStrategy struct {
 	batch []types.Candle
-	sent  chan types.Candle // Chan to receive candles for the current step
-	ack   chan struct{}     // chan to tell onCandle to finish "processing"
+	sent  chan types.Candle
+	ack   chan struct{}
 }
 
 func newCandlesParallelismStrategy() *candlesParallelismStrategy {
 	return &candlesParallelismStrategy{sent: make(chan types.Candle), ack: make(chan struct{})}
 }
 
-func (s *candlesParallelismStrategy) Init(api StrategyAPI) error {
+func (s *candlesParallelismStrategy) Init(api PortfolioApi) error {
 	return nil
 }
-func (s *candlesParallelismStrategy) OnCandle(c types.Candle) {
+func (s *candlesParallelismStrategy) OnCandle(c types.Candle) []types.Signal {
 	// Send the candle
 	s.sent <- c
-	// Then wait for wrap up after all candles are verified and receives
+	// Then wait for wrap up after all candles are received
 	<-s.ack
+	return nil
+}
+
+type allocatorStrategy struct {
+	callAllocator   int
+	allocatorCalled int
+}
+
+func (a *allocatorStrategy) Init(api PortfolioApi) error {
+	return nil
+}
+
+func (a *allocatorStrategy) OnCandle(candle types.Candle) []types.Signal {
+	var signals []types.Signal
+	if a.allocatorCalled < a.callAllocator {
+		for i := range a.callAllocator {
+			signals = append(signals, types.Signal{Time: time.UnixMilli(int64(i))})
+		}
+		a.allocatorCalled++
+	}
+	return signals
 }
