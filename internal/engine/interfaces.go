@@ -23,5 +23,5 @@ type PortfolioApi interface {
 	GetPortfolioSnapshot() types.PortfolioView
 }
 type broker interface {
-	Execute(orders []types.Order, ctx types.ExecutionContext)
+	Execute(orders []types.Order, ctx types.ExecutionContext) []types.ExecutionReport
 }

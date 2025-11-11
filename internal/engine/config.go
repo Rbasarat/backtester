@@ -2,8 +2,9 @@ package engine
 
 import (
 	"backtester/types"
-	"github.com/shopspring/decimal"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 type DataFeedConfig struct {

@@ -11,7 +11,7 @@ type backtester struct {
 	strategy        strategy
 	allocator       allocator
 	broker          broker
-	portfolio       *types.Portfolio
+	portfolio       *portfolio
 
 	start          time.Time
 	curTime        time.Time
@@ -20,7 +20,7 @@ type backtester struct {
 	executionIndex map[string]int
 }
 
-func newBacktester(feeds []*DataFeedConfig, executionConfig ExecutionConfig, strat strategy, sizing allocator, broker broker, portfolio *types.Portfolio) *backtester {
+func newBacktester(feeds []*DataFeedConfig, executionConfig ExecutionConfig, strat strategy, sizing allocator, broker broker, portfolio *portfolio) *backtester {
 	start, end := getGlobalTimeRange(feeds)
 
 	return &backtester{
@@ -82,6 +82,7 @@ func (b *backtester) getExecutionContext() types.ExecutionContext {
 		candlesMap[ticker] = createMapFromCandles(candles)
 	}
 	ctx.Candles = candlesMap
+	ctx.Portfolio = b.portfolio.GetPortfolioSnapshot()
 	return ctx
 }
 

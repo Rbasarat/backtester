@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"backtester/types"
 	"context"
 )
 
@@ -12,12 +11,12 @@ type Engine struct {
 	strategy        strategy
 	allocator       allocator
 	broker          broker
-	portfolio       *types.Portfolio
+	portfolio       *portfolio
 	backtester      *backtester
 }
 
 func NewEngine(feeds []*DataFeedConfig, executionConfig ExecutionConfig, strat strategy, sizer allocator, broker broker, wallet *PortfolioConfig, db dataStore) *Engine {
-	newPortfolio := types.NewPortfolio(wallet.InitialCash)
+	newPortfolio := newPortfolio(wallet.InitialCash)
 
 	return &Engine{
 		db:              db,
