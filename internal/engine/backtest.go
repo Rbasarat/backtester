@@ -6,30 +6,35 @@ import (
 )
 
 type backtester struct {
-	feeds     []*DataFeedConfig
-	strategy  strategy
-	allocator allocator
-	broker    broker
-	portfolio *types.Portfolio
+	feeds           []*DataFeedConfig
+	executionConfig ExecutionConfig
+	strategy        strategy
+	allocator       allocator
+	broker          broker
+	portfolio       *types.Portfolio
 
-	start     time.Time
-	curTime   time.Time
-	end       time.Time
-	feedIndex map[string]int
+	start          time.Time
+	curTime        time.Time
+	end            time.Time
+	feedIndex      map[string]int
+	executionIndex map[string]int
 }
 
-func newBacktester(feeds []*DataFeedConfig, strat strategy, sizing allocator, broker broker, portfolio *types.Portfolio) *backtester {
+func newBacktester(feeds []*DataFeedConfig, executionConfig ExecutionConfig, strat strategy, sizing allocator, broker broker, portfolio *types.Portfolio) *backtester {
 	start, end := getGlobalTimeRange(feeds)
+
 	return &backtester{
-		start:     start,
-		end:       end,
-		curTime:   start,
-		feeds:     feeds,
-		strategy:  strat,
-		allocator: sizing,
-		broker:    broker,
-		portfolio: portfolio,
-		feedIndex: make(map[string]int),
+		start:           start,
+		end:             end,
+		curTime:         start,
+		feeds:           feeds,
+		executionConfig: executionConfig,
+		strategy:        strat,
+		allocator:       sizing,
+		broker:          broker,
+		portfolio:       portfolio,
+		feedIndex:       make(map[string]int),
+		executionIndex:  make(map[string]int),
 	}
 }
 
@@ -46,15 +51,46 @@ func (b *backtester) run() error {
 				signals = append(signals, b.strategy.OnCandle(curCandle)...)
 				b.feedIndex[feed.Ticker]++
 			}
+			b.executionIndex[feed.Ticker] = advanceFeedIndex(b.executionConfig.candles[feed.Ticker], b.executionIndex[feed.Ticker], b.curTime)
 		}
 
 		orders := b.allocator.Allocate(signals, b.portfolio.GetPortfolioSnapshot())
-		b.broker.Execute(orders)
+		b.broker.Execute(orders, b.getExecutionContext())
 
 		// We use time.Minute here because the lowest timeframe we have is minute
 		b.curTime = b.curTime.Add(time.Minute)
 	}
 	return nil
+}
+
+func (b *backtester) getExecutionContext() types.ExecutionContext {
+	ctx := types.ExecutionContext{CurTime: b.curTime}
+	candlesMap := make(map[string]map[time.Time]types.Candle)
+	for ticker, feed := range b.executionConfig.candles {
+		start := b.executionIndex[ticker] - b.executionConfig.BarsBefore
+		end := b.executionIndex[ticker] + b.executionConfig.BarsAfter
+		if start < 0 {
+			start = 0
+		}
+		if end > len(feed) {
+			end = len(feed)
+		}
+		if start > end {
+			start = end
+		}
+		candles := feed[start:end]
+		candlesMap[ticker] = createMapFromCandles(candles)
+	}
+	ctx.Candles = candlesMap
+	return ctx
+}
+
+func createMapFromCandles(candles []types.Candle) map[time.Time]types.Candle {
+	candlesToTime := make(map[time.Time]types.Candle)
+	for _, candle := range candles {
+		candlesToTime[candle.Timestamp] = candle
+	}
+	return candlesToTime
 }
 
 func getGlobalTimeRange(feeds []*DataFeedConfig) (time.Time, time.Time) {
@@ -74,4 +110,16 @@ func getGlobalTimeRange(feeds []*DataFeedConfig) (time.Time, time.Time) {
 		}
 	}
 	return minStart, maxEnd
+}
+
+// Index only goes one way
+func advanceFeedIndex(candles []types.Candle, curIndex int, curTime time.Time) int {
+	for curIndex < len(candles) && !candles[curIndex].Timestamp.After(curTime) {
+		curIndex++
+	}
+	// curIndex is now at the first candle *after* curTime, so latest usable is curIndex-1.
+	if curIndex == 0 {
+		return 0
+	}
+	return curIndex - 1
 }

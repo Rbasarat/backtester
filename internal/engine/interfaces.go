@@ -16,11 +16,12 @@ type strategy interface {
 	OnCandle(candle types.Candle) []types.Signal
 }
 type allocator interface {
+	Init(api PortfolioApi) error
 	Allocate(signals []types.Signal, view types.PortfolioView) []types.Order
 }
 type PortfolioApi interface {
 	GetPortfolioSnapshot() types.PortfolioView
 }
 type broker interface {
-	Execute([]types.Order)
+	Execute(orders []types.Order, ctx types.ExecutionContext)
 }

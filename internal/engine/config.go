@@ -14,14 +14,12 @@ type DataFeedConfig struct {
 	candles  []types.Candle
 }
 
-func NewDataFeed(ticker string, interval types.Interval, start, end time.Time) *DataFeedConfig {
-	return &DataFeedConfig{
-		Ticker:   ticker,
-		Interval: interval,
-		Start:    start,
-		End:      end,
-		candles:  []types.Candle{},
+func NewDataFeedConfig(feeds ...DataFeedConfig) []*DataFeedConfig {
+	var dataFeeds []*DataFeedConfig
+	for _, feed := range feeds {
+		dataFeeds = append(dataFeeds, &feed)
 	}
+	return dataFeeds
 }
 
 type PortfolioConfig struct {
@@ -31,5 +29,21 @@ type PortfolioConfig struct {
 func NewPortfolioConfig(initialCash decimal.Decimal) *PortfolioConfig {
 	return &PortfolioConfig{
 		InitialCash: initialCash,
+	}
+}
+
+type ExecutionConfig struct {
+	Interval   types.Interval
+	BarsBefore int
+	BarsAfter  int
+	candles    map[string][]types.Candle
+}
+
+func NewExecutionConfig(executionInterval types.Interval, barsBefore, barsAfter int) ExecutionConfig {
+	return ExecutionConfig{
+		Interval:   executionInterval,
+		BarsBefore: barsBefore,
+		BarsAfter:  barsAfter,
+		candles:    make(map[string][]types.Candle),
 	}
 }
