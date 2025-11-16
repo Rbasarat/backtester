@@ -135,7 +135,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 			wantErr: InsufficientBalanceErr,
 		},
 		{
-			name: "no fills → ignored",
+			name: "no executions → ignored",
 			startPortfolio: portfolio{
 				cash:      decimal.NewFromFloat(100),
 				positions: map[string]*Position{},
@@ -202,14 +202,14 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple fills in single execution report",
+			name: "multiple executions in single execution report",
 			startPortfolio: portfolio{
 				cash:      decimal.NewFromFloat(1000),
 				positions: map[string]*Position{},
 			},
 			execs: []ExecutionReport{
 				{
-					orderID: "order-1",
+					orderId: "order-1",
 					symbol:  "AAPL",
 					side:    types.SideTypeBuy,
 					status:  types.OrderFilled,
@@ -256,7 +256,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 			},
 			execs: []ExecutionReport{
 				{
-					orderID: "order-1",
+					orderId: "order-1",
 					symbol:  "AAPL",
 					side:    types.SideTypeBuy,
 					status:  types.OrderFilled,
@@ -275,7 +275,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					reportTime:     time.UnixMilli(1),
 				},
 				{
-					orderID: "order-2",
+					orderId: "order-2",
 					symbol:  "AAPL",
 					side:    types.SideTypeBuy,
 					status:  types.OrderFilled,
@@ -315,7 +315,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 			},
 			execs: []ExecutionReport{
 				{
-					orderID: "order-2",
+					orderId: "order-2",
 					symbol:  "AAPL",
 					side:    types.SideTypeBuy,
 					status:  types.OrderFilled,
@@ -334,7 +334,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					reportTime:     time.UnixMilli(2),
 				},
 				{
-					orderID: "order-1",
+					orderId: "order-1",
 					symbol:  "AAPL",
 					side:    types.SideTypeBuy,
 					status:  types.OrderFilled,
@@ -380,7 +380,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 			},
 			execs: []ExecutionReport{
 				{
-					orderID: "order-oversell",
+					orderId: "order-oversell",
 					symbol:  "AAPL",
 					side:    types.SideTypeSell,
 					status:  types.OrderFilled,
@@ -564,7 +564,7 @@ func newExecutionReport(symbol string, side types.Side, fills ...Fill) Execution
 	}
 
 	return ExecutionReport{
-		orderID:        "X",
+		orderId:        "X",
 		symbol:         symbol,
 		side:           side,
 		status:         types.OrderFilled,

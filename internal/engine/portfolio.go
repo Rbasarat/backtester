@@ -12,11 +12,12 @@ import (
 var UnknownSideErr = errors.New("unknown fill side")
 var InsufficientBalanceErr = errors.New("insufficient balance when applying order fill")
 var ShortSellNotAllowedErr = errors.New("short sell not allowed, broker sold more stock than in portfolio")
+var NegativeQtyErr = errors.New("negative qty for fill is not allowed, please set the side to SideTypeSell")
 
 type portfolio struct {
 	cash              decimal.Decimal
 	positions         map[string]*Position
-	fills             []Fill
+	executions        []ExecutionReport
 	realizedPnL       decimal.Decimal
 	snapshots         []types.PortfolioView
 	allowShortSelling bool
@@ -58,31 +59,46 @@ func (p *portfolio) processExecutions(execs []ExecutionReport) error {
 	if len(execs) == 0 {
 		return nil
 	}
-	sort.Slice(execs, func(i, j int) bool { return execs[i].reportTime.Before(execs[j].reportTime) })
+
+	sort.Slice(execs, func(i, j int) bool {
+		return execs[i].reportTime.Before(execs[j].reportTime)
+	})
+
 	for _, er := range execs {
 		if len(er.fills) == 0 {
 			continue
 		}
-		// sort fills by time
+
+		// Validate side once per execution report
+		if er.side != types.SideTypeBuy && er.side != types.SideTypeSell {
+			return UnknownSideErr
+		}
+
+		// Precompute side sign: +1 for BUY, -1 for SELL
+		sideSign := decimal.NewFromInt(1)
+		if er.side == types.SideTypeSell {
+			sideSign = sideSign.Neg()
+		}
+
 		fills := append([]Fill(nil), er.fills...)
-		sort.Slice(fills, func(i, j int) bool { return fills[i].Time.Before(fills[j].Time) })
+		sort.Slice(fills, func(i, j int) bool {
+			return fills[i].Time.Before(fills[j].Time)
+		})
 
 		pos := p.positions[er.symbol]
 		if pos == nil {
-			// Create new position
+			// Create new position if it doesn't exist
 			pos = &Position{Symbol: er.symbol}
 			p.positions[er.symbol] = pos
 		}
 
 		for _, fill := range fills {
-			quantity := fill.Qty
-			if er.side != types.SideTypeBuy && er.side != types.SideTypeSell {
-				return UnknownSideErr
+			if fill.Qty.IsNegative() {
+				return NegativeQtyErr
 			}
 
-			if er.side == types.SideTypeSell {
-				quantity = quantity.Neg()
-			}
+			// Set qty to negative if we have types.SideTypeSell
+			quantity := fill.Qty.Mul(sideSign)
 
 			cashDelta := fill.Price.Mul(quantity).Neg()
 			newCash := p.cash.Add(cashDelta).Sub(fill.Fee)
@@ -92,39 +108,50 @@ func (p *portfolio) processExecutions(execs []ExecutionReport) error {
 			}
 			p.cash = newCash
 
+			// Position quantity update
 			oldQty := pos.Quantity
 			newQty := oldQty.Add(quantity)
+
 			if !p.allowShortSelling && newQty.IsNegative() {
 				return ShortSellNotAllowedErr
 			}
 
+			// Average cost logic based on old/new side and size
 			switch {
 			case sameSide(oldQty, newQty):
+				// Increasing an existing position on the same side
 				absOld := oldQty.Abs()
 				absNew := newQty.Abs()
 				absAdd := quantity.Abs()
+
 				if absNew.GreaterThan(absOld) && !absAdd.IsZero() {
 					pos.AvgCost = weightedAvg(pos.AvgCost, absOld, fill.Price, absAdd)
 				}
 				pos.Quantity = newQty
 
 			case oldQty.IsZero():
+				// Opening a new position from flat
 				pos.Quantity = newQty
 				pos.AvgCost = fill.Price
 
 			case newQty.IsZero():
+				// Fully closed position
 				pos.Quantity = decimal.Zero
 				pos.AvgCost = decimal.Zero
 
 			default:
+				// Flipped side (e.g. went from long to short or vice versa)
 				pos.Quantity = newQty
 				pos.AvgCost = fill.Price
 			}
 
 			pos.LastPrice = fill.Price
-			p.fills = append(p.fills, fill)
 		}
+
+		// Store the full execution report for audit / reporting
+		p.executions = append(p.executions, er)
 	}
+
 	return nil
 }
 
