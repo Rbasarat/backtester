@@ -8,7 +8,8 @@ import (
 )
 
 type ExecutionReport struct {
-	orderID        string
+	TradeId        string
+	orderId        string
 	symbol         string
 	side           types.Side
 	status         types.OrderStatus
@@ -51,7 +52,7 @@ func NewExecutionReport(
 	reportTime time.Time,
 ) ExecutionReport {
 	return ExecutionReport{
-		orderID:        orderID,
+		orderId:        orderID,
 		symbol:         symbol,
 		side:           side,
 		status:         status,

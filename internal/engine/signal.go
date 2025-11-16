@@ -17,8 +17,20 @@ type Signal struct {
 	createdAt time.Time
 }
 
-func NewSignal(tradeId, symbol, reason string, side types.Side, price decimal.Decimal, createdAt time.Time) *Signal {
-	return &Signal{
-		tradeId, symbol, side, price, reason, createdAt,
+func NewSignal(
+	tradeID string,
+	symbol string,
+	side types.Side,
+	price decimal.Decimal,
+	reason string,
+	createdAt time.Time,
+) Signal {
+	return Signal{
+		tradeId:   tradeID,
+		symbol:    symbol,
+		side:      side,
+		price:     price,
+		reason:    reason,
+		createdAt: createdAt,
 	}
 }
