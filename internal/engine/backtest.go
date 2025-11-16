@@ -40,7 +40,7 @@ func newBacktester(feeds []*DataFeedConfig, executionConfig ExecutionConfig, str
 
 func (b *backtester) run() error {
 	for !b.curTime.After(b.end) {
-		var signals []types.Signal
+		var signals []Signal
 		for _, feed := range b.feeds {
 			i := b.feedIndex[feed.Ticker]
 			if i >= len(feed.candles) {
@@ -59,6 +59,11 @@ func (b *backtester) run() error {
 		err := b.portfolio.processExecutions(executions)
 		if err != nil {
 			return err
+		}
+
+		// Create a snapshot of the portfolio every day
+		if b.curTime.Hour() == 0 && b.curTime.Minute() == 0 {
+			b.portfolio.snapshots = append(b.portfolio.snapshots, b.portfolio.GetPortfolioSnapshot(b.curTime))
 		}
 
 		// We use time.Minute here because the lowest timeframe we have is minute
@@ -89,7 +94,6 @@ func (b *backtester) getExecutionContext() types.ExecutionContext {
 	ctx.Portfolio = b.portfolio.GetPortfolioSnapshot(b.curTime)
 	return ctx
 }
-
 
 func createMapFromCandles(candles []types.Candle) map[time.Time]types.Candle {
 	candlesToTime := make(map[time.Time]types.Candle)

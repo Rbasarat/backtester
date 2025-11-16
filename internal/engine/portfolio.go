@@ -16,7 +16,7 @@ var ShortSellNotAllowedErr = errors.New("short sell not allowed, broker sold mor
 type portfolio struct {
 	cash              decimal.Decimal
 	positions         map[string]*Position
-	fills             []types.Fill
+	fills             []Fill
 	realizedPnL       decimal.Decimal
 	snapshots         []types.PortfolioView
 	allowShortSelling bool
@@ -54,33 +54,33 @@ func (p *portfolio) GetPortfolioSnapshot(curTime time.Time) types.PortfolioView 
 	return view
 }
 
-func (p *portfolio) processExecutions(execs []types.ExecutionReport) error {
+func (p *portfolio) processExecutions(execs []ExecutionReport) error {
 	if len(execs) == 0 {
 		return nil
 	}
-	sort.Slice(execs, func(i, j int) bool { return execs[i].ReportTime.Before(execs[j].ReportTime) })
+	sort.Slice(execs, func(i, j int) bool { return execs[i].reportTime.Before(execs[j].reportTime) })
 	for _, er := range execs {
-		if len(er.Fills) == 0 {
+		if len(er.fills) == 0 {
 			continue
 		}
 		// sort fills by time
-		fills := append([]types.Fill(nil), er.Fills...)
+		fills := append([]Fill(nil), er.fills...)
 		sort.Slice(fills, func(i, j int) bool { return fills[i].Time.Before(fills[j].Time) })
 
-		pos := p.positions[er.Symbol]
+		pos := p.positions[er.symbol]
 		if pos == nil {
 			// Create new position
-			pos = &Position{Symbol: er.Symbol}
-			p.positions[er.Symbol] = pos
+			pos = &Position{Symbol: er.symbol}
+			p.positions[er.symbol] = pos
 		}
 
 		for _, fill := range fills {
 			quantity := fill.Qty
-			if er.Side != types.SideTypeBuy && er.Side != types.SideTypeSell {
+			if er.side != types.SideTypeBuy && er.side != types.SideTypeSell {
 				return UnknownSideErr
 			}
 
-			if er.Side == types.SideTypeSell {
+			if er.side == types.SideTypeSell {
 				quantity = quantity.Neg()
 			}
 

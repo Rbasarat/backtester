@@ -13,7 +13,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 	tests := []struct {
 		name           string
 		startPortfolio portfolio
-		execs          []types.ExecutionReport
+		execs          []ExecutionReport
 		wantPortfolio  portfolio
 		wantErr        error
 	}{
@@ -23,7 +23,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash:      decimal.NewFromFloat(10000),
 				positions: map[string]*Position{},
 			},
-			execs: []types.ExecutionReport{
+			execs: []ExecutionReport{
 				newExecutionReport("AAPL", types.SideTypeBuy, newFill(time.UnixMilli(1), "100", "10", "1.00")),
 			},
 			wantPortfolio: portfolio{
@@ -51,7 +51,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					},
 				},
 			},
-			execs: []types.ExecutionReport{
+			execs: []ExecutionReport{
 				newExecutionReport("AAPL", types.SideTypeBuy, newFill(time.UnixMilli(1).Add(time.Minute), "110", "5", "0")),
 			},
 			wantPortfolio: portfolio{
@@ -79,7 +79,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					},
 				},
 			},
-			execs: []types.ExecutionReport{
+			execs: []ExecutionReport{
 				newExecutionReport("AAPL", types.SideTypeSell, newFill(time.UnixMilli(1).Add(time.Minute), "105", "4", "0.50")),
 			},
 			wantPortfolio: portfolio{
@@ -108,7 +108,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					},
 				},
 			},
-			execs: []types.ExecutionReport{
+			execs: []ExecutionReport{
 				newExecutionReport("AAPL", types.SideTypeSell, newFill(time.UnixMilli(1).Add(time.Minute), "90", "8", "0")),
 			},
 			wantPortfolio: portfolio{
@@ -129,7 +129,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash:      decimal.NewFromFloat(100),
 				positions: map[string]*Position{},
 			},
-			execs: []types.ExecutionReport{
+			execs: []ExecutionReport{
 				newExecutionReport("AAPL", types.SideTypeBuy, newFill(time.UnixMilli(1), "10", "20", "0")),
 			},
 			wantErr: InsufficientBalanceErr,
@@ -140,8 +140,8 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash:      decimal.NewFromFloat(100),
 				positions: map[string]*Position{},
 			},
-			execs: []types.ExecutionReport{
-				{Symbol: "AAPL", Side: types.SideTypeBuy, Fills: nil},
+			execs: []ExecutionReport{
+				{symbol: "AAPL", side: types.SideTypeBuy, fills: nil},
 			},
 			wantPortfolio: portfolio{
 				cash:      decimal.NewFromFloat(100),
@@ -167,7 +167,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					},
 				},
 			},
-			execs: []types.ExecutionReport{
+			execs: []ExecutionReport{
 				// Buy 5 more AAPL at 110
 				newExecutionReport("AAPL", types.SideTypeBuy,
 					newFill(time.UnixMilli(1), "110", "5", "0.25"),
@@ -207,13 +207,13 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash:      decimal.NewFromFloat(1000),
 				positions: map[string]*Position{},
 			},
-			execs: []types.ExecutionReport{
+			execs: []ExecutionReport{
 				{
-					OrderID: "order-1",
-					Symbol:  "AAPL",
-					Side:    types.SideTypeBuy,
-					Status:  types.OrderFilled,
-					Fills: []types.Fill{
+					orderID: "order-1",
+					symbol:  "AAPL",
+					side:    types.SideTypeBuy,
+					status:  types.OrderFilled,
+					fills: []Fill{
 						{
 							Time:  time.UnixMilli(1),
 							Price: decimal.NewFromFloat(10),
@@ -227,11 +227,11 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 							Fee:   decimal.NewFromFloat(0.20),
 						},
 					},
-					TotalFilledQty: decimal.NewFromFloat(10),
-					AvgFillPrice:   decimal.NewFromFloat(15),
-					TotalFees:      decimal.NewFromFloat(0.30),
-					RemainingQty:   decimal.NewFromFloat(0),
-					ReportTime:     time.UnixMilli(2),
+					totalFilledQty: decimal.NewFromFloat(10),
+					avgFillPrice:   decimal.NewFromFloat(15),
+					totalFees:      decimal.NewFromFloat(0.30),
+					remainingQty:   decimal.NewFromFloat(0),
+					reportTime:     time.UnixMilli(2),
 				},
 			},
 			wantPortfolio: portfolio{
@@ -254,13 +254,13 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash:      decimal.NewFromFloat(1000),
 				positions: map[string]*Position{},
 			},
-			execs: []types.ExecutionReport{
+			execs: []ExecutionReport{
 				{
-					OrderID: "order-1",
-					Symbol:  "AAPL",
-					Side:    types.SideTypeBuy,
-					Status:  types.OrderFilled,
-					Fills: []types.Fill{
+					orderID: "order-1",
+					symbol:  "AAPL",
+					side:    types.SideTypeBuy,
+					status:  types.OrderFilled,
+					fills: []Fill{
 						{
 							Time:  time.UnixMilli(1),
 							Price: decimal.NewFromFloat(10),
@@ -268,18 +268,18 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 							Fee:   decimal.NewFromFloat(0.10),
 						},
 					},
-					TotalFilledQty: decimal.NewFromFloat(5),
-					AvgFillPrice:   decimal.NewFromFloat(10),
-					TotalFees:      decimal.NewFromFloat(0.10),
-					RemainingQty:   decimal.NewFromFloat(0),
-					ReportTime:     time.UnixMilli(1),
+					totalFilledQty: decimal.NewFromFloat(5),
+					avgFillPrice:   decimal.NewFromFloat(10),
+					totalFees:      decimal.NewFromFloat(0.10),
+					remainingQty:   decimal.NewFromFloat(0),
+					reportTime:     time.UnixMilli(1),
 				},
 				{
-					OrderID: "order-2",
-					Symbol:  "AAPL",
-					Side:    types.SideTypeBuy,
-					Status:  types.OrderFilled,
-					Fills: []types.Fill{
+					orderID: "order-2",
+					symbol:  "AAPL",
+					side:    types.SideTypeBuy,
+					status:  types.OrderFilled,
+					fills: []Fill{
 						{
 							Time:  time.UnixMilli(2),
 							Price: decimal.NewFromFloat(20),
@@ -287,11 +287,11 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 							Fee:   decimal.NewFromFloat(0.20),
 						},
 					},
-					TotalFilledQty: decimal.NewFromFloat(5),
-					AvgFillPrice:   decimal.NewFromFloat(20),
-					TotalFees:      decimal.NewFromFloat(0.20),
-					RemainingQty:   decimal.NewFromFloat(0),
-					ReportTime:     time.UnixMilli(2),
+					totalFilledQty: decimal.NewFromFloat(5),
+					avgFillPrice:   decimal.NewFromFloat(20),
+					totalFees:      decimal.NewFromFloat(0.20),
+					remainingQty:   decimal.NewFromFloat(0),
+					reportTime:     time.UnixMilli(2),
 				},
 			},
 			wantPortfolio: portfolio{
@@ -313,13 +313,13 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				positions:         map[string]*Position{},
 				allowShortSelling: true,
 			},
-			execs: []types.ExecutionReport{
+			execs: []ExecutionReport{
 				{
-					OrderID: "order-2",
-					Symbol:  "AAPL",
-					Side:    types.SideTypeBuy,
-					Status:  types.OrderFilled,
-					Fills: []types.Fill{
+					orderID: "order-2",
+					symbol:  "AAPL",
+					side:    types.SideTypeBuy,
+					status:  types.OrderFilled,
+					fills: []Fill{
 						{
 							Time:  time.UnixMilli(2),
 							Price: decimal.NewFromFloat(20),
@@ -327,18 +327,18 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 							Fee:   decimal.NewFromFloat(0.20),
 						},
 					},
-					TotalFilledQty: decimal.NewFromFloat(5),
-					AvgFillPrice:   decimal.NewFromFloat(20),
-					TotalFees:      decimal.NewFromFloat(0.20),
-					RemainingQty:   decimal.NewFromFloat(0),
-					ReportTime:     time.UnixMilli(2),
+					totalFilledQty: decimal.NewFromFloat(5),
+					avgFillPrice:   decimal.NewFromFloat(20),
+					totalFees:      decimal.NewFromFloat(0.20),
+					remainingQty:   decimal.NewFromFloat(0),
+					reportTime:     time.UnixMilli(2),
 				},
 				{
-					OrderID: "order-1",
-					Symbol:  "AAPL",
-					Side:    types.SideTypeBuy,
-					Status:  types.OrderFilled,
-					Fills: []types.Fill{
+					orderID: "order-1",
+					symbol:  "AAPL",
+					side:    types.SideTypeBuy,
+					status:  types.OrderFilled,
+					fills: []Fill{
 						{
 							Time:  time.UnixMilli(1),
 							Price: decimal.NewFromFloat(10),
@@ -346,11 +346,11 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 							Fee:   decimal.NewFromFloat(0.10),
 						},
 					},
-					TotalFilledQty: decimal.NewFromFloat(5),
-					AvgFillPrice:   decimal.NewFromFloat(10),
-					TotalFees:      decimal.NewFromFloat(0.10),
-					RemainingQty:   decimal.NewFromFloat(0),
-					ReportTime:     time.UnixMilli(1),
+					totalFilledQty: decimal.NewFromFloat(5),
+					avgFillPrice:   decimal.NewFromFloat(10),
+					totalFees:      decimal.NewFromFloat(0.10),
+					remainingQty:   decimal.NewFromFloat(0),
+					reportTime:     time.UnixMilli(1),
 				},
 			},
 			wantPortfolio: portfolio{
@@ -378,13 +378,13 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					},
 				},
 			},
-			execs: []types.ExecutionReport{
+			execs: []ExecutionReport{
 				{
-					OrderID: "order-oversell",
-					Symbol:  "AAPL",
-					Side:    types.SideTypeSell,
-					Status:  types.OrderFilled,
-					Fills: []types.Fill{
+					orderID: "order-oversell",
+					symbol:  "AAPL",
+					side:    types.SideTypeSell,
+					status:  types.OrderFilled,
+					fills: []Fill{
 						{
 							Time:  time.Date(2025, time.January, 2, 10, 1, 0, 0, time.UTC),
 							Price: decimal.NewFromFloat(110),
@@ -392,11 +392,11 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 							Fee:   decimal.NewFromFloat(0),
 						},
 					},
-					TotalFilledQty: decimal.NewFromFloat(10),
-					AvgFillPrice:   decimal.NewFromFloat(110),
-					TotalFees:      decimal.NewFromFloat(0),
-					RemainingQty:   decimal.NewFromFloat(0),
-					ReportTime:     time.Date(2025, time.January, 2, 10, 1, 0, 0, time.UTC),
+					totalFilledQty: decimal.NewFromFloat(10),
+					avgFillPrice:   decimal.NewFromFloat(110),
+					totalFees:      decimal.NewFromFloat(0),
+					remainingQty:   decimal.NewFromFloat(0),
+					reportTime:     time.Date(2025, time.January, 2, 10, 1, 0, 0, time.UTC),
 				},
 			},
 			wantPortfolio: portfolio{
@@ -538,11 +538,11 @@ func TestWeightedAvgPrice(t *testing.T) {
 
 // Helper functions
 
-func newFill(t time.Time, price, qty, fee string) types.Fill {
-	return types.Fill{Time: t, Price: decimal.RequireFromString(price), Qty: decimal.RequireFromString(qty), Fee: decimal.RequireFromString(fee)}
+func newFill(t time.Time, price, qty, fee string) Fill {
+	return Fill{Time: t, Price: decimal.RequireFromString(price), Qty: decimal.RequireFromString(qty), Fee: decimal.RequireFromString(fee)}
 }
 
-func newExecutionReport(symbol string, side types.Side, fills ...types.Fill) types.ExecutionReport {
+func newExecutionReport(symbol string, side types.Side, fills ...Fill) ExecutionReport {
 	totalQty := decimal.Zero
 	totalFees := decimal.Zero
 	sum := decimal.Zero
@@ -559,19 +559,19 @@ func newExecutionReport(symbol string, side types.Side, fills ...types.Fill) typ
 	}
 
 	if len(fills) > 0 {
-		cp := append([]types.Fill(nil), fills...)
+		cp := append([]Fill(nil), fills...)
 		sort.Slice(cp, func(i, j int) bool { return cp[i].Time.Before(cp[j].Time) })
 	}
 
-	return types.ExecutionReport{
-		OrderID:        "X",
-		Symbol:         symbol,
-		Side:           side,
-		Status:         types.OrderFilled,
-		Fills:          fills,
-		TotalFilledQty: totalQty,
-		AvgFillPrice:   avg,
-		TotalFees:      totalFees,
-		RemainingQty:   decimal.Zero,
+	return ExecutionReport{
+		orderID:        "X",
+		symbol:         symbol,
+		side:           side,
+		status:         types.OrderFilled,
+		fills:          fills,
+		totalFilledQty: totalQty,
+		avgFillPrice:   avg,
+		totalFees:      totalFees,
+		remainingQty:   decimal.Zero,
 	}
 }

@@ -1,15 +1,18 @@
 package types
 
-import (
-	"time"
-
-	"github.com/shopspring/decimal"
-)
-
 type Side string
 type OrderType string
 
+type OrderStatus string
+
 const (
+	OrderAccepted        OrderStatus = "ORDER_ACCEPTED"
+	OrderPartiallyFilled             = "ORDER_PARTIALLY_FILLED"
+	OrderFilled                      = "ORDER_FILLED"
+	OrderRejected                    = "ORDER_REJECTED"
+	OrderExpired                     = "ORDER_EXPIRED"
+	OrderCanceled                    = "ORDER_CANCELED"
+
 	SideTypeBuy  Side = "BUY"
 	SideTypeSell Side = "SELL"
 
@@ -21,15 +24,3 @@ const (
 	TypeTakeProfit      OrderType = "TAKE_PROFIT"
 	TypeTakeProfitLimit OrderType = "TAKE_PROFIT_LIMIT"
 )
-
-type Order struct {
-	Timestamp        time.Time
-	ID               int
-	Symbol           string
-	Price            decimal.Decimal
-	OrigQuantity     decimal.Decimal
-	ExecutedQuantity decimal.Decimal
-	Type             OrderType
-	Side             Side
-	Fee              decimal.Decimal
-}

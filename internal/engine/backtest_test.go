@@ -16,7 +16,7 @@ func TestBacktest_BacktesterBrokerUpdatePortfolio(t *testing.T) {
 	testStrat := allocatorStrategy{}
 	testAllocator := &mockAllocator{}
 	testBroker := &mockBroker{
-		reports: []types.ExecutionReport{newExecutionReport("AAPL", types.SideTypeBuy, newFill(time.UnixMilli(1), "100", "1", "1.00"))},
+		reports: []ExecutionReport{newExecutionReport("AAPL", types.SideTypeBuy, newFill(time.UnixMilli(1), "100", "1", "1.00"))},
 	}
 
 	engine := mockEngine(&testStrat, mockFeed(), testAllocator, testBroker)
@@ -622,7 +622,7 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 						}
 					}
 				} else {
-					t.Errorf("Time %v does not exist in gotCandles", curTime)
+					t.Errorf("createdAt %v does not exist in gotCandles", curTime)
 				}
 			}
 		})
@@ -746,10 +746,10 @@ func mockEngine(strat strategy, feeds []*DataFeedConfig, allocator allocator, br
 type mockBroker struct {
 	callCount int
 	ctx       []types.ExecutionContext
-	reports   []types.ExecutionReport
+	reports   []ExecutionReport
 }
 
-func (m *mockBroker) Execute(orders []types.Order, ctx types.ExecutionContext) []types.ExecutionReport {
+func (m *mockBroker) Execute(orders []Order, ctx types.ExecutionContext) []ExecutionReport {
 	m.callCount++
 	m.ctx = append(m.ctx, ctx)
 	return m.reports
@@ -763,7 +763,7 @@ func (m *mockAllocator) Init(api PortfolioApi) error {
 	return nil
 }
 
-func (m *mockAllocator) Allocate(signals []types.Signal, view types.PortfolioView) []types.Order {
+func (m *mockAllocator) Allocate(signals []Signal, view types.PortfolioView) []Order {
 	m.callCount++
 	return nil
 }
@@ -812,7 +812,7 @@ type candlesReceivedStrategy struct {
 func (t *candlesReceivedStrategy) Init(api PortfolioApi) error {
 	return nil
 }
-func (t *candlesReceivedStrategy) OnCandle(candle types.Candle) []types.Signal {
+func (t *candlesReceivedStrategy) OnCandle(candle types.Candle) []Signal {
 	t.receivedCandles = append(t.receivedCandles, candle)
 	t.receivedCount++
 	return nil
@@ -831,7 +831,7 @@ func newCandlesParallelismStrategy() *candlesParallelismStrategy {
 func (s *candlesParallelismStrategy) Init(api PortfolioApi) error {
 	return nil
 }
-func (s *candlesParallelismStrategy) OnCandle(c types.Candle) []types.Signal {
+func (s *candlesParallelismStrategy) OnCandle(c types.Candle) []Signal {
 	// Send the candle
 	s.sent <- c
 	// Then wait for wrap up after all candles are received
@@ -848,11 +848,11 @@ func (a *allocatorStrategy) Init(api PortfolioApi) error {
 	return nil
 }
 
-func (a *allocatorStrategy) OnCandle(candle types.Candle) []types.Signal {
-	var signals []types.Signal
+func (a *allocatorStrategy) OnCandle(candle types.Candle) []Signal {
+	var signals []Signal
 	if a.allocatorCalled < a.callAllocator {
 		for i := range a.callAllocator {
-			signals = append(signals, types.Signal{Time: time.UnixMilli(int64(i))})
+			signals = append(signals, Signal{createdAt: time.UnixMilli(int64(i))})
 		}
 		a.allocatorCalled++
 	}

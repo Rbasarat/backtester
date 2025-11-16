@@ -13,15 +13,19 @@ type dataStore interface {
 
 type strategy interface {
 	Init(api PortfolioApi) error
-	OnCandle(candle types.Candle) []types.Signal
+	OnCandle(candle types.Candle) []Signal
 }
+
 type allocator interface {
 	Init(api PortfolioApi) error
-	Allocate(signals []types.Signal, view types.PortfolioView) []types.Order
+	Allocate(signals []Signal, view types.PortfolioView) []Order
 }
+
+type broker interface {
+	Execute(orders []Order, ctx types.ExecutionContext) []ExecutionReport
+}
+
 type PortfolioApi interface {
 	GetPortfolioSnapshot() types.PortfolioView
-}
-type broker interface {
-	Execute(orders []types.Order, ctx types.ExecutionContext) []types.ExecutionReport
+	GetFillsForTrade(tradeId string) []Fill
 }
