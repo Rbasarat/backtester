@@ -5,28 +5,30 @@ import (
 )
 
 type Engine struct {
-	db              dataStore
-	feeds           []*DataFeedConfig
-	executionConfig ExecutionConfig
-	strategy        strategy
-	allocator       allocator
-	broker          broker
-	portfolio       *portfolio
-	backtester      *backtester
+	db                dataStore
+	feeds             []*DataFeedConfig
+	executionConfig   ExecutionConfig
+	strategy          strategy
+	allocator         allocator
+	broker            broker
+	portfolio         *portfolio
+	backtester        *backtester
+	allowShortSelling bool
 }
 
-func NewEngine(feeds []*DataFeedConfig, executionConfig ExecutionConfig, strat strategy, sizer allocator, broker broker, wallet *PortfolioConfig, db dataStore) *Engine {
-	newPortfolio := newPortfolio(wallet.InitialCash)
+func NewEngine(feeds []*DataFeedConfig, executionConfig ExecutionConfig, strat strategy, sizer allocator, broker broker, wallet *PortfolioConfig, allowShortSelling bool, db dataStore) *Engine {
+	initPortfolio := newPortfolio(wallet.InitialCash, allowShortSelling)
 
 	return &Engine{
-		db:              db,
-		feeds:           feeds,
-		executionConfig: executionConfig,
-		strategy:        strat,
-		allocator:       sizer,
-		broker:          broker,
-		portfolio:       newPortfolio,
-		backtester:      newBacktester(feeds, executionConfig, strat, sizer, broker, newPortfolio),
+		db:                db,
+		feeds:             feeds,
+		executionConfig:   executionConfig,
+		strategy:          strat,
+		allocator:         sizer,
+		broker:            broker,
+		portfolio:         initPortfolio,
+		allowShortSelling: allowShortSelling,
+		backtester:        newBacktester(feeds, executionConfig, strat, sizer, broker, initPortfolio),
 	}
 }
 

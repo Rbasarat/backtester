@@ -27,13 +27,13 @@ type Fill struct {
 	Fee   decimal.Decimal
 }
 
-type OrderStatus int
+type OrderStatus string
 
 const (
-	OrderAccepted OrderStatus = iota
-	OrderPartiallyFilled
-	OrderFilled
-	OrderRejected
-	OrderExpired
-	OrderCanceled
+	OrderAccepted        OrderStatus = "ORDER_ACCEPTED"
+	OrderPartiallyFilled             = "ORDER_PARTIALLY_FILLED"
+	OrderFilled                      = "ORDER_FILLED"
+	OrderRejected                    = "ORDER_REJECTED"
+	OrderExpired                     = "ORDER_EXPIRED"
+	OrderCanceled                    = "ORDER_CANCELED"
 )

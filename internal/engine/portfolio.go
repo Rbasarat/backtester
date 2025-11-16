@@ -2,50 +2,142 @@ package engine
 
 import (
 	"backtester/types"
+	"errors"
+	"sort"
 	"time"
 
 	"github.com/shopspring/decimal"
 )
 
+var UnknownSideErr = errors.New("unknown fill side")
+var InsufficientBalanceErr = errors.New("insufficient balance when applying order fill")
+var ShortSellNotAllowedErr = errors.New("short sell not allowed, broker sold more stock than in portfolio")
+
 type portfolio struct {
-	Cash         decimal.Decimal
-	Positions    map[string]*Position
-	OpenTrades   map[string][]*types.Trade
-	ClosedTrades map[string][]*types.Trade
+	cash              decimal.Decimal
+	positions         map[string]*Position
+	fills             []types.Fill
+	realizedPnL       decimal.Decimal
+	snapshots         []types.PortfolioView
+	allowShortSelling bool
 }
 
 type Position struct {
-	Symbol     string
-	Side       types.Side
-	Quantity   decimal.Decimal
-	EntryPrice decimal.Decimal
-	EntryTime  time.Time
-	LastPrice  decimal.Decimal
+	Symbol    string
+	Quantity  decimal.Decimal
+	AvgCost   decimal.Decimal
+	LastPrice decimal.Decimal
 }
 
-func newPortfolio(initialCash decimal.Decimal) *portfolio {
+func newPortfolio(initialCash decimal.Decimal, allowShortSelling bool) *portfolio {
 	return &portfolio{
-		Cash:         initialCash,
-		Positions:    make(map[string]*Position), //TODO: we can make this a list to allow for scaling in/out if needed later
-		OpenTrades:   make(map[string][]*types.Trade),
-		ClosedTrades: make(map[string][]*types.Trade),
+		cash:              initialCash,
+		positions:         make(map[string]*Position),
+		allowShortSelling: allowShortSelling,
 	}
 }
 
-func (p *portfolio) GetPortfolioSnapshot() types.PortfolioView {
+func (p *portfolio) GetPortfolioSnapshot(curTime time.Time) types.PortfolioView {
 	view := types.PortfolioView{
-		Cash:      p.Cash,
+		Cash:      p.cash,
 		Positions: make(map[string]types.PositionSnapshot),
+		Time:      curTime,
 	}
 
-	for sym, pos := range p.Positions {
+	for sym, pos := range p.positions {
 		view.Positions[sym] = types.PositionSnapshot{
 			Symbol:    pos.Symbol,
-			Side:      pos.Side,
 			Quantity:  pos.Quantity,
 			LastPrice: pos.LastPrice,
-			EntryTime: pos.EntryTime,
 		}
 	}
 	return view
+}
+
+func (p *portfolio) processExecutions(execs []types.ExecutionReport) error {
+	if len(execs) == 0 {
+		return nil
+	}
+	sort.Slice(execs, func(i, j int) bool { return execs[i].ReportTime.Before(execs[j].ReportTime) })
+	for _, er := range execs {
+		if len(er.Fills) == 0 {
+			continue
+		}
+		// sort fills by time
+		fills := append([]types.Fill(nil), er.Fills...)
+		sort.Slice(fills, func(i, j int) bool { return fills[i].Time.Before(fills[j].Time) })
+
+		pos := p.positions[er.Symbol]
+		if pos == nil {
+			// Create new position
+			pos = &Position{Symbol: er.Symbol}
+			p.positions[er.Symbol] = pos
+		}
+
+		for _, fill := range fills {
+			quantity := fill.Qty
+			if er.Side != types.SideTypeBuy && er.Side != types.SideTypeSell {
+				return UnknownSideErr
+			}
+
+			if er.Side == types.SideTypeSell {
+				quantity = quantity.Neg()
+			}
+
+			cashDelta := fill.Price.Mul(quantity).Neg()
+			newCash := p.cash.Add(cashDelta).Sub(fill.Fee)
+
+			if newCash.LessThan(decimal.Zero) {
+				return InsufficientBalanceErr
+			}
+			p.cash = newCash
+
+			oldQty := pos.Quantity
+			newQty := oldQty.Add(quantity)
+			if !p.allowShortSelling && newQty.IsNegative() {
+				return ShortSellNotAllowedErr
+			}
+
+			switch {
+			case sameSide(oldQty, newQty):
+				absOld := oldQty.Abs()
+				absNew := newQty.Abs()
+				absAdd := quantity.Abs()
+				if absNew.GreaterThan(absOld) && !absAdd.IsZero() {
+					pos.AvgCost = weightedAvg(pos.AvgCost, absOld, fill.Price, absAdd)
+				}
+				pos.Quantity = newQty
+
+			case oldQty.IsZero():
+				pos.Quantity = newQty
+				pos.AvgCost = fill.Price
+
+			case newQty.IsZero():
+				pos.Quantity = decimal.Zero
+				pos.AvgCost = decimal.Zero
+
+			default:
+				pos.Quantity = newQty
+				pos.AvgCost = fill.Price
+			}
+
+			pos.LastPrice = fill.Price
+			p.fills = append(p.fills, fill)
+		}
+	}
+	return nil
+}
+
+func sameSide(a, b decimal.Decimal) bool {
+	return (a.GreaterThan(decimal.Zero) && b.GreaterThan(decimal.Zero)) ||
+		(a.LessThan(decimal.Zero) && b.LessThan(decimal.Zero))
+}
+
+func weightedAvg(existingAvgPrice, existingQty, newPrice, newQty decimal.Decimal) decimal.Decimal {
+	if existingQty.IsZero() {
+		return newPrice
+	}
+	return existingAvgPrice.Mul(existingQty).
+		Add(newPrice.Mul(newQty)).
+		Div(existingQty.Add(newQty))
 }

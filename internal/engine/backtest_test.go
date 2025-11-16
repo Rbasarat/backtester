@@ -12,13 +12,36 @@ import (
 
 var testInterval = types.OneMinute
 
+func TestBacktest_BacktesterBrokerUpdatePortfolio(t *testing.T) {
+	testStrat := allocatorStrategy{}
+	testAllocator := &mockAllocator{}
+	testBroker := &mockBroker{
+		reports: []types.ExecutionReport{newExecutionReport("AAPL", types.SideTypeBuy, newFill(time.UnixMilli(1), "100", "1", "1.00"))},
+	}
+
+	engine := mockEngine(&testStrat, mockFeed(), testAllocator, testBroker)
+
+	err := engine.Run()
+	if err != nil {
+		t.Fatalf("Error running backtester: %v", err)
+	}
+	portfolioSnapshot := engine.portfolio.GetPortfolioSnapshot(time.UnixMilli(1))
+	pos, ok := portfolioSnapshot.Positions["AAPL"]
+	if !ok {
+		t.Fatalf("expected portfolio position AAPL but was nil")
+	}
+	if !pos.Quantity.Equal(decimal.NewFromFloat(6)) {
+		t.Errorf("expected position AAPL to have quantity 6, got %v", pos.Quantity)
+	}
+
+}
+
 func TestBacktest_BacktesterBrokerExecutionContext(t *testing.T) {
 	testStrat := allocatorStrategy{}
 	testAllocator := &mockAllocator{}
 	testBroker := &mockBroker{}
 
 	engine := mockEngine(&testStrat, mockFeed(), testAllocator, testBroker)
-	engine.portfolio = newPortfolio(decimal.NewFromInt(1000))
 
 	err := engine.Run()
 	if err != nil {
@@ -85,7 +108,7 @@ func TestBacktester_GetExecutionContext_ClampsWindow_NoPanics(t *testing.T) {
 					BarsBefore: tc.before,
 					BarsAfter:  tc.after,
 				},
-				portfolio:      newPortfolio(decimal.NewFromInt(1000)),
+				portfolio:      newPortfolio(decimal.NewFromInt(1000), true),
 				executionIndex: map[string]int{"TICK": tc.index},
 			}
 
@@ -119,7 +142,7 @@ func TestBacktester_GetExecutionContext_MixedTickers_Clamping(t *testing.T) {
 			BarsBefore: 1,
 			BarsAfter:  2,
 		},
-		portfolio: newPortfolio(decimal.NewFromInt(1000)),
+		portfolio: newPortfolio(decimal.NewFromInt(1000), true),
 		executionIndex: map[string]int{
 			"AAPL": 5, // start=4->clamp 3; end=7->clamp 3 => empty
 			"GOOG": 0, // start=-1->0; end=2 -> selects 100,101
@@ -173,7 +196,7 @@ func TestBacktester_GetExecutionContext_SlicesAndMapsByTicker(t *testing.T) {
 	}
 
 	bt := &backtester{
-		portfolio:       newPortfolio(decimal.NewFromInt(1000)),
+		portfolio:       newPortfolio(decimal.NewFromInt(1000), true),
 		curTime:         time.UnixMilli(9_999),
 		executionConfig: cfg,
 		executionIndex:  idx,
@@ -711,24 +734,25 @@ func mockFeed() []*DataFeedConfig {
 }
 func mockEngine(strat strategy, feeds []*DataFeedConfig, allocator allocator, broker broker) *Engine {
 	db := mockDb{}
-	portfolio := NewPortfolioConfig(decimal.NewFromInt(1000))
+	newPortfolio := NewPortfolioConfig(decimal.NewFromInt(100000))
 	executionConfig := NewExecutionConfig(types.OneMinute, 1, 1)
 	for _, feed := range feeds {
 		executionConfig.candles[feed.Ticker] = feed.candles
 	}
-	engine := NewEngine(feeds, executionConfig, strat, allocator, broker, portfolio, db)
+	engine := NewEngine(feeds, executionConfig, strat, allocator, broker, newPortfolio, true, db)
 	return engine
 }
 
 type mockBroker struct {
 	callCount int
 	ctx       []types.ExecutionContext
+	reports   []types.ExecutionReport
 }
 
 func (m *mockBroker) Execute(orders []types.Order, ctx types.ExecutionContext) []types.ExecutionReport {
 	m.callCount++
 	m.ctx = append(m.ctx, ctx)
-	return nil
+	return m.reports
 }
 
 type mockAllocator struct {

@@ -24,7 +24,8 @@ func NewDataFeedConfig(feeds ...DataFeedConfig) []*DataFeedConfig {
 }
 
 type PortfolioConfig struct {
-	InitialCash decimal.Decimal
+	InitialCash       decimal.Decimal
+	AllowShortSelling bool
 }
 
 func NewPortfolioConfig(initialCash decimal.Decimal) *PortfolioConfig {

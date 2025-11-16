@@ -9,6 +9,7 @@ import (
 type PortfolioView struct {
 	Cash      decimal.Decimal
 	Positions map[string]PositionSnapshot
+	Time      time.Time
 }
 
 type PositionSnapshot struct {
@@ -17,5 +18,4 @@ type PositionSnapshot struct {
 	Quantity      decimal.Decimal
 	AvgEntryPrice decimal.Decimal
 	LastPrice     decimal.Decimal
-	EntryTime     time.Time
 }

@@ -54,8 +54,12 @@ func (b *backtester) run() error {
 			b.executionIndex[feed.Ticker] = advanceFeedIndex(b.executionConfig.candles[feed.Ticker], b.executionIndex[feed.Ticker], b.curTime)
 		}
 
-		orders := b.allocator.Allocate(signals, b.portfolio.GetPortfolioSnapshot())
-		b.broker.Execute(orders, b.getExecutionContext())
+		orders := b.allocator.Allocate(signals, b.portfolio.GetPortfolioSnapshot(b.curTime))
+		executions := b.broker.Execute(orders, b.getExecutionContext())
+		err := b.portfolio.processExecutions(executions)
+		if err != nil {
+			return err
+		}
 
 		// We use time.Minute here because the lowest timeframe we have is minute
 		b.curTime = b.curTime.Add(time.Minute)
@@ -82,9 +86,10 @@ func (b *backtester) getExecutionContext() types.ExecutionContext {
 		candlesMap[ticker] = createMapFromCandles(candles)
 	}
 	ctx.Candles = candlesMap
-	ctx.Portfolio = b.portfolio.GetPortfolioSnapshot()
+	ctx.Portfolio = b.portfolio.GetPortfolioSnapshot(b.curTime)
 	return ctx
 }
+
 
 func createMapFromCandles(candles []types.Candle) map[time.Time]types.Candle {
 	candlesToTime := make(map[time.Time]types.Candle)
