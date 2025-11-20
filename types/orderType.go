@@ -1,6 +1,8 @@
 package types
 
 type Side string
+
+type Direction string
 type OrderType string
 
 type OrderStatus string
@@ -15,6 +17,9 @@ const (
 
 	SideTypeBuy  Side = "BUY"
 	SideTypeSell Side = "SELL"
+
+	DirectionLong  Direction = "LONG"
+	DirectionShort Direction = "SHORT"
 
 	TypeLimit           OrderType = "LIMIT"
 	TypeMarket          OrderType = "MARKET"

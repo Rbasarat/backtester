@@ -17,7 +17,7 @@ type Asset struct {
 	Ticker     string    `json:"ticker"`
 	Name       string    `json:"name"`
 	Type       AssetType `json:"type"`
-	CreatedAt  time.Time `json:"createdAt"`
+	CreatedAt  time.Time `json:"CreatedAt"`
 	ModifiedAt time.Time `json:"modifiedAt"`
 }
 

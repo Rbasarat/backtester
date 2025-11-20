@@ -18,14 +18,14 @@ type strategy interface {
 
 type allocator interface {
 	Init(api PortfolioApi) error
-	Allocate(signals []Signal, view types.PortfolioView) []Order
+	Allocate(signals []Signal, view types.PortfolioView) []types.Order
 }
 
 type broker interface {
-	Execute(orders []Order, ctx types.ExecutionContext) []ExecutionReport
+	Execute(orders []types.Order, ctx types.ExecutionContext) []types.ExecutionReport
 }
 
 type PortfolioApi interface {
 	GetPortfolioSnapshot() types.PortfolioView
-	GetFillsForTrade(tradeId string) []Fill
+	GetFillsForTrade(tradeId string) []types.Fill
 }

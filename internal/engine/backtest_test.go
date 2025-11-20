@@ -16,7 +16,7 @@ func TestBacktest_BacktesterBrokerUpdatePortfolio(t *testing.T) {
 	testStrat := allocatorStrategy{}
 	testAllocator := &mockAllocator{}
 	testBroker := &mockBroker{
-		reports: []ExecutionReport{newExecutionReport("AAPL", types.SideTypeBuy, newFill(time.UnixMilli(1), "100", "1", "1.00"))},
+		reports: []types.ExecutionReport{newExecutionReport("AAPL", types.SideTypeBuy, newFill(time.UnixMilli(1), "100", "1", "1.00"))},
 	}
 
 	engine := mockEngine(&testStrat, mockFeed(), testAllocator, testBroker)
@@ -103,10 +103,10 @@ func TestBacktester_GetExecutionContext_ClampsWindow_NoPanics(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			bt := &backtester{
 				curTime: time.UnixMilli(42),
-				executionConfig: ExecutionConfig{
+				executionConfig: &ExecutionConfig{
 					candles:    map[string][]types.Candle{"TICK": tc.feed},
-					BarsBefore: tc.before,
-					BarsAfter:  tc.after,
+					barsBefore: tc.before,
+					barsAfter:  tc.after,
 				},
 				portfolio:      newPortfolio(decimal.NewFromInt(1000), true),
 				executionIndex: map[string]int{"TICK": tc.index},
@@ -134,13 +134,13 @@ func TestBacktester_GetExecutionContext_MixedTickers_Clamping(t *testing.T) {
 
 	bt := &backtester{
 		curTime: time.UnixMilli(9_999),
-		executionConfig: ExecutionConfig{
+		executionConfig: &ExecutionConfig{
 			candles: map[string][]types.Candle{
 				"AAPL": aapl,
 				"GOOG": goog,
 			},
-			BarsBefore: 1,
-			BarsAfter:  2,
+			barsBefore: 1,
+			barsAfter:  2,
 		},
 		portfolio: newPortfolio(decimal.NewFromInt(1000), true),
 		executionIndex: map[string]int{
@@ -187,8 +187,8 @@ func TestBacktester_GetExecutionContext_SlicesAndMapsByTicker(t *testing.T) {
 			"AAPL": aaplFeed,
 			"GOOG": googFeed,
 		},
-		BarsBefore: 1,
-		BarsAfter:  2,
+		barsBefore: 1,
+		barsAfter:  2,
 	}
 	idx := map[string]int{
 		"AAPL": 2,
@@ -198,7 +198,7 @@ func TestBacktester_GetExecutionContext_SlicesAndMapsByTicker(t *testing.T) {
 	bt := &backtester{
 		portfolio:       newPortfolio(decimal.NewFromInt(1000), true),
 		curTime:         time.UnixMilli(9_999),
-		executionConfig: cfg,
+		executionConfig: &cfg,
 		executionIndex:  idx,
 	}
 
@@ -459,7 +459,7 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 		{
 			name: "feed with no candles",
 			feeds: []*DataFeedConfig{
-				{Ticker: "A", Start: newTime(0), End: newTime(2), candles: nil},
+				{ticker: "A", start: newTime(0), end: newTime(2), candles: nil},
 			},
 			wantCandles: map[time.Time][]types.Candle{},
 		},
@@ -467,9 +467,9 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 			name: "all feeds send same timestamp per tick",
 			feeds: []*DataFeedConfig{
 				{
-					Ticker: "A",
-					Start:  newTime(0),
-					End:    newTime(2),
+					ticker: "A",
+					start:  newTime(0),
+					end:    newTime(2),
 					candles: []types.Candle{
 						mockCandle(1, newTime(0)),
 						mockCandle(1, newTime(1)),
@@ -486,18 +486,18 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 			name: "one feed is subset of max range",
 			feeds: []*DataFeedConfig{
 				{
-					Ticker: "A",
-					Start:  newTime(0),
-					End:    newTime(2),
+					ticker: "A",
+					start:  newTime(0),
+					end:    newTime(2),
 					candles: []types.Candle{
 						mockCandle(1, newTime(0)),
 						mockCandle(1, newTime(1)),
 						mockCandle(1, newTime(2))},
 				},
 				{
-					Ticker: "B",
-					Start:  newTime(1),
-					End:    newTime(1),
+					ticker: "B",
+					start:  newTime(1),
+					end:    newTime(1),
 					candles: []types.Candle{
 						mockCandle(1, newTime(1))},
 				},
@@ -512,18 +512,18 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 			name: "two feeds send same timestamp per tick",
 			feeds: []*DataFeedConfig{
 				{
-					Ticker: "A",
-					Start:  newTime(0),
-					End:    newTime(2),
+					ticker: "A",
+					start:  newTime(0),
+					end:    newTime(2),
 					candles: []types.Candle{
 						mockCandle(1, newTime(0)),
 						mockCandle(1, newTime(1)),
 						mockCandle(1, newTime(2))},
 				},
 				{
-					Ticker: "B",
-					Start:  newTime(0),
-					End:    newTime(2),
+					ticker: "B",
+					start:  newTime(0),
+					end:    newTime(2),
 					candles: []types.Candle{
 						mockCandle(2, newTime(0)),
 						mockCandle(2, newTime(1)),
@@ -539,12 +539,12 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 		{
 			name: "irregular intervals vs dense feed",
 			feeds: []*DataFeedConfig{
-				{Ticker: "A", Start: newTime(0), End: newTime(5),
+				{ticker: "A", start: newTime(0), end: newTime(5),
 					candles: []types.Candle{
 						mockCandle(1, newTime(0)), mockCandle(1, newTime(3)), mockCandle(1, newTime(5)),
 					},
 				},
-				{Ticker: "B", Start: newTime(0), End: newTime(5),
+				{ticker: "B", start: newTime(0), end: newTime(5),
 					candles: []types.Candle{
 						mockCandle(2, newTime(0)), mockCandle(2, newTime(1)), mockCandle(2, newTime(2)),
 						mockCandle(2, newTime(3)), mockCandle(2, newTime(4)), mockCandle(2, newTime(5)),
@@ -564,18 +564,18 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 			name: "one feed overlaps the other",
 			feeds: []*DataFeedConfig{
 				{
-					Ticker: "A",
-					Start:  newTime(0),
-					End:    newTime(2),
+					ticker: "A",
+					start:  newTime(0),
+					end:    newTime(2),
 					candles: []types.Candle{
 						mockCandle(1, newTime(0)),
 						mockCandle(1, newTime(1)),
 						mockCandle(1, newTime(2))},
 				},
 				{
-					Ticker: "B",
-					Start:  newTime(1),
-					End:    newTime(3),
+					ticker: "B",
+					start:  newTime(1),
+					end:    newTime(3),
 					candles: []types.Candle{
 						mockCandle(2, newTime(1)),
 						mockCandle(2, newTime(2)),
@@ -659,32 +659,32 @@ func TestBacktest_getGlobalTimeRange(t *testing.T) {
 	}{
 		{
 			name:      "should return 0",
-			args:      NewDataFeedConfig(),
+			args:      NewDataFeedConfigs(),
 			wantStart: time.UnixMilli(0),
 			wantEnd:   time.UnixMilli(0),
 		},
 		{
 			name: "should find min and max in first feed",
-			args: NewDataFeedConfig(
-				DataFeedConfig{Ticker: "AAPL", Interval: testInterval, Start: time.UnixMilli(1), End: time.UnixMilli(2)},
+			args: NewDataFeedConfigs(
+				&DataFeedConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(1), end: time.UnixMilli(2)},
 			),
 			wantStart: time.UnixMilli(1),
 			wantEnd:   time.UnixMilli(2),
 		},
 		{
 			name: "should find min in first and max in second feed",
-			args: NewDataFeedConfig(
-				DataFeedConfig{Ticker: "AAPL", Interval: testInterval, Start: time.UnixMilli(1), End: time.UnixMilli(2)},
-				DataFeedConfig{Ticker: "AAPL", Interval: testInterval, Start: time.UnixMilli(2), End: time.UnixMilli(3)},
+			args: NewDataFeedConfigs(
+				&DataFeedConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(1), end: time.UnixMilli(2)},
+				&DataFeedConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(2), end: time.UnixMilli(3)},
 			),
 			wantStart: time.UnixMilli(1),
 			wantEnd:   time.UnixMilli(3),
 		},
 		{
 			name: "should find min in second and max in first feed",
-			args: NewDataFeedConfig(
-				DataFeedConfig{Ticker: "AAPL", Interval: testInterval, Start: time.UnixMilli(3), End: time.UnixMilli(6)},
-				DataFeedConfig{Ticker: "AAPL", Interval: testInterval, Start: time.UnixMilli(1), End: time.UnixMilli(2)},
+			args: NewDataFeedConfigs(
+				&DataFeedConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(3), end: time.UnixMilli(6)},
+				&DataFeedConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(1), end: time.UnixMilli(2)},
 			),
 			wantStart: time.UnixMilli(1),
 			wantEnd:   time.UnixMilli(6),
@@ -723,33 +723,28 @@ func mockCandles(startMilli int64, n int, assetID int) []types.Candle {
 }
 
 func mockFeed() []*DataFeedConfig {
-	return NewDataFeedConfig(
-		DataFeedConfig{
-			Ticker:   "AAPL",
-			Interval: testInterval,
-			Start:    time.UnixMilli(0),
-			End:      time.UnixMilli(0).Add(types.IntervalToTime[testInterval] * time.Duration(5)),
-		},
-	)
+	return NewDataFeedConfigs(
+		NewDataFeedConfig("AAPL", testInterval, time.UnixMilli(0), time.UnixMilli(0).Add(types.IntervalToTime[testInterval]*time.Duration(5))))
 }
 func mockEngine(strat strategy, feeds []*DataFeedConfig, allocator allocator, broker broker) *Engine {
 	db := mockDb{}
-	newPortfolio := NewPortfolioConfig(decimal.NewFromInt(100000))
+	newPortfolio := NewPortfolioConfig(decimal.NewFromInt(100000), false)
 	executionConfig := NewExecutionConfig(types.OneMinute, 1, 1)
 	for _, feed := range feeds {
-		executionConfig.candles[feed.Ticker] = feed.candles
+		executionConfig.candles[feed.ticker] = feed.candles
 	}
-	engine := NewEngine(feeds, executionConfig, strat, allocator, broker, newPortfolio, true, db)
+	reportingConfig := NewReportingConfig(decimal.NewFromFloat(0.03))
+	engine := NewEngine(feeds, executionConfig, reportingConfig, strat, allocator, broker, newPortfolio, db)
 	return engine
 }
 
 type mockBroker struct {
 	callCount int
 	ctx       []types.ExecutionContext
-	reports   []ExecutionReport
+	reports   []types.ExecutionReport
 }
 
-func (m *mockBroker) Execute(orders []Order, ctx types.ExecutionContext) []ExecutionReport {
+func (m *mockBroker) Execute(orders []types.Order, ctx types.ExecutionContext) []types.ExecutionReport {
 	m.callCount++
 	m.ctx = append(m.ctx, ctx)
 	return m.reports
@@ -763,7 +758,7 @@ func (m *mockAllocator) Init(api PortfolioApi) error {
 	return nil
 }
 
-func (m *mockAllocator) Allocate(signals []Signal, view types.PortfolioView) []Order {
+func (m *mockAllocator) Allocate(signals []Signal, view types.PortfolioView) []types.Order {
 	m.callCount++
 	return nil
 }

@@ -7,7 +7,8 @@ import (
 
 type backtester struct {
 	feeds           []*DataFeedConfig
-	executionConfig ExecutionConfig
+	executionConfig *ExecutionConfig
+	portfolioConfig *PortfolioConfig
 	strategy        strategy
 	allocator       allocator
 	broker          broker
@@ -20,7 +21,7 @@ type backtester struct {
 	executionIndex map[string]int
 }
 
-func newBacktester(feeds []*DataFeedConfig, executionConfig ExecutionConfig, strat strategy, sizing allocator, broker broker, portfolio *portfolio) *backtester {
+func newBacktester(feeds []*DataFeedConfig, executionConfig *ExecutionConfig, portfolioConfig *PortfolioConfig, strat strategy, sizing allocator, broker broker, portfolio *portfolio) *backtester {
 	start, end := getGlobalTimeRange(feeds)
 
 	return &backtester{
@@ -29,6 +30,7 @@ func newBacktester(feeds []*DataFeedConfig, executionConfig ExecutionConfig, str
 		curTime:         start,
 		feeds:           feeds,
 		executionConfig: executionConfig,
+		portfolioConfig: portfolioConfig,
 		strategy:        strat,
 		allocator:       sizing,
 		broker:          broker,
@@ -42,16 +44,16 @@ func (b *backtester) run() error {
 	for !b.curTime.After(b.end) {
 		var signals []Signal
 		for _, feed := range b.feeds {
-			i := b.feedIndex[feed.Ticker]
+			i := b.feedIndex[feed.ticker]
 			if i >= len(feed.candles) {
 				continue
 			}
 			curCandle := feed.candles[i]
 			if curCandle.Timestamp.Equal(b.curTime) {
 				signals = append(signals, b.strategy.OnCandle(curCandle)...)
-				b.feedIndex[feed.Ticker]++
+				b.feedIndex[feed.ticker]++
 			}
-			b.executionIndex[feed.Ticker] = advanceFeedIndex(b.executionConfig.candles[feed.Ticker], b.executionIndex[feed.Ticker], b.curTime)
+			b.executionIndex[feed.ticker] = advanceFeedIndex(b.executionConfig.candles[feed.ticker], b.executionIndex[feed.ticker], b.curTime)
 		}
 
 		orders := b.allocator.Allocate(signals, b.portfolio.GetPortfolioSnapshot(b.curTime))
@@ -76,8 +78,8 @@ func (b *backtester) getExecutionContext() types.ExecutionContext {
 	ctx := types.ExecutionContext{CurTime: b.curTime}
 	candlesMap := make(map[string]map[time.Time]types.Candle)
 	for ticker, feed := range b.executionConfig.candles {
-		start := b.executionIndex[ticker] - b.executionConfig.BarsBefore
-		end := b.executionIndex[ticker] + b.executionConfig.BarsAfter
+		start := b.executionIndex[ticker] - b.executionConfig.barsBefore
+		end := b.executionIndex[ticker] + b.executionConfig.barsAfter
 		if start < 0 {
 			start = 0
 		}
@@ -108,15 +110,15 @@ func getGlobalTimeRange(feeds []*DataFeedConfig) (time.Time, time.Time) {
 		return time.UnixMilli(0), time.UnixMilli(0)
 	}
 
-	minStart := feeds[0].Start
-	maxEnd := feeds[0].End
+	minStart := feeds[0].start
+	maxEnd := feeds[0].end
 
 	for _, f := range feeds[1:] {
-		if f.Start.Before(minStart) {
-			minStart = f.Start
+		if f.start.Before(minStart) {
+			minStart = f.start
 		}
-		if f.End.After(maxEnd) {
-			maxEnd = f.End
+		if f.end.After(maxEnd) {
+			maxEnd = f.end
 		}
 	}
 	return minStart, maxEnd

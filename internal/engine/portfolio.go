@@ -17,7 +17,7 @@ var NegativeQtyErr = errors.New("negative qty for fill is not allowed, please se
 type portfolio struct {
 	cash              decimal.Decimal
 	positions         map[string]*Position
-	executions        []ExecutionReport
+	executions        []types.ExecutionReport
 	realizedPnL       decimal.Decimal
 	snapshots         []types.PortfolioView
 	allowShortSelling bool
@@ -55,7 +55,7 @@ func (p *portfolio) GetPortfolioSnapshot(curTime time.Time) types.PortfolioView 
 	return view
 }
 
-func (p *portfolio) processExecutions(execs []ExecutionReport) error {
+func (p *portfolio) processExecutions(execs []types.ExecutionReport) error {
 	if len(execs) == 0 {
 		return nil
 	}
@@ -80,7 +80,7 @@ func (p *portfolio) processExecutions(execs []ExecutionReport) error {
 			sideSign = sideSign.Neg()
 		}
 
-		fills := append([]Fill(nil), er.fills...)
+		fills := append([]types.Fill(nil), er.fills...)
 		sort.Slice(fills, func(i, j int) bool {
 			return fills[i].Time.Before(fills[j].Time)
 		})

@@ -1,7 +1,6 @@
-package engine
+package types
 
 import (
-	"backtester/types"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -9,10 +8,10 @@ import (
 
 type ExecutionReport struct {
 	TradeId        string
-	orderId        string
-	symbol         string
-	side           types.Side
-	status         types.OrderStatus
+	OrderId        string
+	Symbol         string
+	side           Side
+	status         OrderStatus
 	fills          []Fill
 	totalFilledQty decimal.Decimal
 	avgFillPrice   decimal.Decimal
@@ -41,8 +40,8 @@ func NewFill(time time.Time, price, qty, fee decimal.Decimal) Fill {
 func NewExecutionReport(
 	orderID string,
 	symbol string,
-	side types.Side,
-	status types.OrderStatus,
+	side Side,
+	status OrderStatus,
 	fills []Fill,
 	totalFilledQty decimal.Decimal,
 	avgFillPrice decimal.Decimal,
@@ -52,8 +51,8 @@ func NewExecutionReport(
 	reportTime time.Time,
 ) ExecutionReport {
 	return ExecutionReport{
-		orderId:        orderID,
-		symbol:         symbol,
+		OrderId:        orderID,
+		Symbol:         symbol,
 		side:           side,
 		status:         status,
 		fills:          fills,

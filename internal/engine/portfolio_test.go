@@ -13,7 +13,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 	tests := []struct {
 		name           string
 		startPortfolio portfolio
-		execs          []ExecutionReport
+		execs          []types.ExecutionReport
 		wantPortfolio  portfolio
 		wantErr        error
 	}{
@@ -23,7 +23,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash:      decimal.NewFromFloat(10000),
 				positions: map[string]*Position{},
 			},
-			execs: []ExecutionReport{
+			execs: []types.ExecutionReport{
 				newExecutionReport("AAPL", types.SideTypeBuy, newFill(time.UnixMilli(1), "100", "10", "1.00")),
 			},
 			wantPortfolio: portfolio{
@@ -51,7 +51,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					},
 				},
 			},
-			execs: []ExecutionReport{
+			execs: []types.ExecutionReport{
 				newExecutionReport("AAPL", types.SideTypeBuy, newFill(time.UnixMilli(1).Add(time.Minute), "110", "5", "0")),
 			},
 			wantPortfolio: portfolio{
@@ -79,7 +79,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					},
 				},
 			},
-			execs: []ExecutionReport{
+			execs: []types.ExecutionReport{
 				newExecutionReport("AAPL", types.SideTypeSell, newFill(time.UnixMilli(1).Add(time.Minute), "105", "4", "0.50")),
 			},
 			wantPortfolio: portfolio{
@@ -108,7 +108,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					},
 				},
 			},
-			execs: []ExecutionReport{
+			execs: []types.ExecutionReport{
 				newExecutionReport("AAPL", types.SideTypeSell, newFill(time.UnixMilli(1).Add(time.Minute), "90", "8", "0")),
 			},
 			wantPortfolio: portfolio{
@@ -129,7 +129,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash:      decimal.NewFromFloat(100),
 				positions: map[string]*Position{},
 			},
-			execs: []ExecutionReport{
+			execs: []types.ExecutionReport{
 				newExecutionReport("AAPL", types.SideTypeBuy, newFill(time.UnixMilli(1), "10", "20", "0")),
 			},
 			wantErr: InsufficientBalanceErr,
@@ -140,7 +140,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash:      decimal.NewFromFloat(100),
 				positions: map[string]*Position{},
 			},
-			execs: []ExecutionReport{
+			execs: []types.ExecutionReport{
 				{symbol: "AAPL", side: types.SideTypeBuy, fills: nil},
 			},
 			wantPortfolio: portfolio{
@@ -167,7 +167,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					},
 				},
 			},
-			execs: []ExecutionReport{
+			execs: []types.ExecutionReport{
 				// Buy 5 more AAPL at 110
 				newExecutionReport("AAPL", types.SideTypeBuy,
 					newFill(time.UnixMilli(1), "110", "5", "0.25"),
@@ -207,13 +207,13 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash:      decimal.NewFromFloat(1000),
 				positions: map[string]*Position{},
 			},
-			execs: []ExecutionReport{
+			execs: []types.ExecutionReport{
 				{
 					orderId: "order-1",
 					symbol:  "AAPL",
 					side:    types.SideTypeBuy,
 					status:  types.OrderFilled,
-					fills: []Fill{
+					fills: []types.Fill{
 						{
 							Time:  time.UnixMilli(1),
 							Price: decimal.NewFromFloat(10),
@@ -254,13 +254,13 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash:      decimal.NewFromFloat(1000),
 				positions: map[string]*Position{},
 			},
-			execs: []ExecutionReport{
+			execs: []types.ExecutionReport{
 				{
 					orderId: "order-1",
 					symbol:  "AAPL",
 					side:    types.SideTypeBuy,
 					status:  types.OrderFilled,
-					fills: []Fill{
+					fills: []types.Fill{
 						{
 							Time:  time.UnixMilli(1),
 							Price: decimal.NewFromFloat(10),
@@ -279,7 +279,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					symbol:  "AAPL",
 					side:    types.SideTypeBuy,
 					status:  types.OrderFilled,
-					fills: []Fill{
+					fills: []types.Fill{
 						{
 							Time:  time.UnixMilli(2),
 							Price: decimal.NewFromFloat(20),
@@ -313,13 +313,13 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				positions:         map[string]*Position{},
 				allowShortSelling: true,
 			},
-			execs: []ExecutionReport{
+			execs: []types.ExecutionReport{
 				{
 					orderId: "order-2",
 					symbol:  "AAPL",
 					side:    types.SideTypeBuy,
 					status:  types.OrderFilled,
-					fills: []Fill{
+					fills: []types.Fill{
 						{
 							Time:  time.UnixMilli(2),
 							Price: decimal.NewFromFloat(20),
@@ -338,7 +338,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					symbol:  "AAPL",
 					side:    types.SideTypeBuy,
 					status:  types.OrderFilled,
-					fills: []Fill{
+					fills: []types.Fill{
 						{
 							Time:  time.UnixMilli(1),
 							Price: decimal.NewFromFloat(10),
@@ -378,13 +378,13 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					},
 				},
 			},
-			execs: []ExecutionReport{
+			execs: []types.ExecutionReport{
 				{
 					orderId: "order-oversell",
 					symbol:  "AAPL",
 					side:    types.SideTypeSell,
 					status:  types.OrderFilled,
-					fills: []Fill{
+					fills: []types.Fill{
 						{
 							Time:  time.Date(2025, time.January, 2, 10, 1, 0, 0, time.UTC),
 							Price: decimal.NewFromFloat(110),
@@ -538,11 +538,11 @@ func TestWeightedAvgPrice(t *testing.T) {
 
 // Helper functions
 
-func newFill(t time.Time, price, qty, fee string) Fill {
-	return Fill{Time: t, Price: decimal.RequireFromString(price), Qty: decimal.RequireFromString(qty), Fee: decimal.RequireFromString(fee)}
+func newFill(t time.Time, price, qty, fee string) types.Fill {
+	return types.Fill{Time: t, Price: decimal.RequireFromString(price), Qty: decimal.RequireFromString(qty), Fee: decimal.RequireFromString(fee)}
 }
 
-func newExecutionReport(symbol string, side types.Side, fills ...Fill) ExecutionReport {
+func newExecutionReport(symbol string, side types.Side, fills ...types.Fill) types.ExecutionReport {
 	totalQty := decimal.Zero
 	totalFees := decimal.Zero
 	sum := decimal.Zero
@@ -559,11 +559,11 @@ func newExecutionReport(symbol string, side types.Side, fills ...Fill) Execution
 	}
 
 	if len(fills) > 0 {
-		cp := append([]Fill(nil), fills...)
+		cp := append([]types.Fill(nil), fills...)
 		sort.Slice(cp, func(i, j int) bool { return cp[i].Time.Before(cp[j].Time) })
 	}
 
-	return ExecutionReport{
+	return types.ExecutionReport{
 		orderId:        "X",
 		symbol:         symbol,
 		side:           side,

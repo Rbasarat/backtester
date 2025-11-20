@@ -8,44 +8,60 @@ import (
 )
 
 type DataFeedConfig struct {
-	Ticker   string
-	Interval types.Interval
-	Start    time.Time
-	End      time.Time
+	ticker   string
+	interval types.Interval
+	start    time.Time
+	end      time.Time
 	candles  []types.Candle
 }
 
-func NewDataFeedConfig(feeds ...DataFeedConfig) []*DataFeedConfig {
-	var dataFeeds []*DataFeedConfig
-	for _, feed := range feeds {
-		dataFeeds = append(dataFeeds, &feed)
+func NewDataFeedConfigs(feeds ...*DataFeedConfig) []*DataFeedConfig {
+	return feeds
+}
+
+func NewDataFeedConfig(ticker string, interval types.Interval, start, end time.Time) *DataFeedConfig {
+	return &DataFeedConfig{
+		ticker:   ticker,
+		interval: interval,
+		start:    start,
+		end:      end,
 	}
-	return dataFeeds
 }
 
 type PortfolioConfig struct {
-	InitialCash       decimal.Decimal
-	AllowShortSelling bool
+	initialCash       decimal.Decimal
+	allowShortSelling bool
 }
 
-func NewPortfolioConfig(initialCash decimal.Decimal) *PortfolioConfig {
+func NewPortfolioConfig(initialCash decimal.Decimal, allowShortSelling bool) *PortfolioConfig {
 	return &PortfolioConfig{
-		InitialCash: initialCash,
+		initialCash:       initialCash,
+		allowShortSelling: allowShortSelling,
 	}
 }
 
 type ExecutionConfig struct {
-	Interval   types.Interval
-	BarsBefore int
-	BarsAfter  int
+	interval   types.Interval
+	barsBefore int
+	barsAfter  int
 	candles    map[string][]types.Candle
 }
 
-func NewExecutionConfig(executionInterval types.Interval, barsBefore, barsAfter int) ExecutionConfig {
-	return ExecutionConfig{
-		Interval:   executionInterval,
-		BarsBefore: barsBefore,
-		BarsAfter:  barsAfter,
+func NewExecutionConfig(executionInterval types.Interval, barsBefore, barsAfter int) *ExecutionConfig {
+	return &ExecutionConfig{
+		interval:   executionInterval,
+		barsBefore: barsBefore,
+		barsAfter:  barsAfter,
 		candles:    make(map[string][]types.Candle),
+	}
+}
+
+type ReportingConfig struct {
+	sharpeRiskFreeRate decimal.Decimal
+}
+
+func NewReportingConfig(sharpeRiskFreeRate decimal.Decimal) *ReportingConfig {
+	return &ReportingConfig{
+		sharpeRiskFreeRate: sharpeRiskFreeRate,
 	}
 }

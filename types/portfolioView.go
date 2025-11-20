@@ -14,7 +14,6 @@ type PortfolioView struct {
 
 type PositionSnapshot struct {
 	Symbol        string
-	Side          Side
 	Quantity      decimal.Decimal
 	AvgEntryPrice decimal.Decimal
 	LastPrice     decimal.Decimal

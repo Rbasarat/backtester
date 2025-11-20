@@ -7,7 +7,9 @@ import (
 type Engine struct {
 	db                dataStore
 	feeds             []*DataFeedConfig
-	executionConfig   ExecutionConfig
+	executionConfig   *ExecutionConfig
+	portfolioConfig   *PortfolioConfig
+	reportingConfig   *ReportingConfig
 	strategy          strategy
 	allocator         allocator
 	broker            broker
@@ -16,19 +18,29 @@ type Engine struct {
 	allowShortSelling bool
 }
 
-func NewEngine(feeds []*DataFeedConfig, executionConfig ExecutionConfig, strat strategy, sizer allocator, broker broker, wallet *PortfolioConfig, allowShortSelling bool, db dataStore) *Engine {
-	initPortfolio := newPortfolio(wallet.InitialCash, allowShortSelling)
+func NewEngine(
+	feeds []*DataFeedConfig,
+	executionConfig *ExecutionConfig,
+	reportingConfig *ReportingConfig,
+	strat strategy,
+	sizer allocator,
+	broker broker,
+	portfolioConfig *PortfolioConfig, db dataStore) *Engine {
+
+	initPortfolio := newPortfolio(portfolioConfig.initialCash, portfolioConfig.allowShortSelling)
 
 	return &Engine{
-		db:                db,
-		feeds:             feeds,
-		executionConfig:   executionConfig,
-		strategy:          strat,
-		allocator:         sizer,
-		broker:            broker,
-		portfolio:         initPortfolio,
-		allowShortSelling: allowShortSelling,
-		backtester:        newBacktester(feeds, executionConfig, strat, sizer, broker, initPortfolio),
+		db:              db,
+		feeds:           feeds,
+		executionConfig: executionConfig,
+		portfolioConfig: portfolioConfig,
+		reportingConfig: reportingConfig,
+
+		strategy:   strat,
+		allocator:  sizer,
+		broker:     broker,
+		portfolio:  initPortfolio,
+		backtester: newBacktester(feeds, executionConfig, portfolioConfig, strat, sizer, broker, initPortfolio),
 	}
 }
 
@@ -49,6 +61,8 @@ func (e *Engine) Run() error {
 		return err
 	}
 
+	report := e.generateReport(e.backtester.start, e.backtester.curTime, e.backtester.portfolio)
+	e.printReport(report)
 	return nil
 }
 
@@ -56,11 +70,11 @@ func (e *Engine) loadFeedData() error {
 	ctx := context.Background()
 
 	for _, feed := range e.backtester.feeds {
-		asset, err := e.db.GetAssetByTicker(feed.Ticker, ctx)
+		asset, err := e.db.GetAssetByTicker(feed.ticker, ctx)
 		if err != nil {
 			return err
 		}
-		cs, err := e.db.GetAggregates(asset.Id, feed.Interval, feed.Start, feed.End, ctx)
+		cs, err := e.db.GetAggregates(asset.Id, feed.interval, feed.start, feed.end, ctx)
 		if err != nil {
 			return err
 		}
@@ -72,15 +86,15 @@ func (e *Engine) loadExecutionFeedData() error {
 	ctx := context.Background()
 
 	for _, feed := range e.feeds {
-		asset, err := e.db.GetAssetByTicker(feed.Ticker, ctx)
+		asset, err := e.db.GetAssetByTicker(feed.ticker, ctx)
 		if err != nil {
 			return err
 		}
-		cs, err := e.db.GetAggregates(asset.Id, feed.Interval, feed.Start, feed.End, ctx)
+		cs, err := e.db.GetAggregates(asset.Id, feed.interval, feed.start, feed.end, ctx)
 		if err != nil {
 			return err
 		}
-		e.backtester.executionConfig.candles[feed.Ticker] = cs
+		e.backtester.executionConfig.candles[feed.ticker] = cs
 	}
 	return nil
 }
