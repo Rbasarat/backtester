@@ -1,36 +1,35 @@
-package engine
+package types
 
 import (
-	"backtester/types"
 	"time"
 
 	"github.com/shopspring/decimal"
 )
 
 type Signal struct {
-	tradeId string
-	symbol  string
-	side    types.Side
+	TradeId string
+	Symbol  string
+	Side    Side
 	//Strength decimal.Decimal //TODO: We can use this for Signal normalization later
-	price     decimal.Decimal
-	reason    string
-	createdAt time.Time
+	Price     decimal.Decimal
+	Reason    string
+	CreatedAt time.Time
 }
 
 func NewSignal(
 	tradeID string,
 	symbol string,
-	side types.Side,
+	side Side,
 	price decimal.Decimal,
 	reason string,
 	createdAt time.Time,
 ) Signal {
 	return Signal{
-		tradeId:   tradeID,
-		symbol:    symbol,
-		side:      side,
-		price:     price,
-		reason:    reason,
-		createdAt: createdAt,
+		TradeId:   tradeID,
+		Symbol:    symbol,
+		Side:      side,
+		Price:     price,
+		Reason:    reason,
+		CreatedAt: createdAt,
 	}
 }

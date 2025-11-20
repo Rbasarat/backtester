@@ -42,7 +42,7 @@ func newBacktester(feeds []*DataFeedConfig, executionConfig *ExecutionConfig, po
 
 func (b *backtester) run() error {
 	for !b.curTime.After(b.end) {
-		var signals []Signal
+		var signals []types.Signal
 		for _, feed := range b.feeds {
 			i := b.feedIndex[feed.ticker]
 			if i >= len(feed.candles) {
@@ -76,7 +76,7 @@ func (b *backtester) run() error {
 
 func (b *backtester) getExecutionContext() types.ExecutionContext {
 	ctx := types.ExecutionContext{CurTime: b.curTime}
-	candlesMap := make(map[string]map[time.Time]types.Candle)
+	candlesMap := make(map[string][]types.Candle)
 	for ticker, feed := range b.executionConfig.candles {
 		start := b.executionIndex[ticker] - b.executionConfig.barsBefore
 		end := b.executionIndex[ticker] + b.executionConfig.barsAfter
@@ -90,19 +90,11 @@ func (b *backtester) getExecutionContext() types.ExecutionContext {
 			start = end
 		}
 		candles := feed[start:end]
-		candlesMap[ticker] = createMapFromCandles(candles)
+		candlesMap[ticker] = candles
 	}
 	ctx.Candles = candlesMap
 	ctx.Portfolio = b.portfolio.GetPortfolioSnapshot(b.curTime)
 	return ctx
-}
-
-func createMapFromCandles(candles []types.Candle) map[time.Time]types.Candle {
-	candlesToTime := make(map[time.Time]types.Candle)
-	for _, candle := range candles {
-		candlesToTime[candle.Timestamp] = candle
-	}
-	return candlesToTime
 }
 
 func getGlobalTimeRange(feeds []*DataFeedConfig) (time.Time, time.Time) {

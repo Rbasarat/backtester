@@ -13,12 +13,12 @@ type dataStore interface {
 
 type strategy interface {
 	Init(api PortfolioApi) error
-	OnCandle(candle types.Candle) []Signal
+	OnCandle(candle types.Candle) []types.Signal
 }
 
 type allocator interface {
 	Init(api PortfolioApi) error
-	Allocate(signals []Signal, view types.PortfolioView) []types.Order
+	Allocate(signals []types.Signal, view types.PortfolioView) []types.Order
 }
 
 type broker interface {

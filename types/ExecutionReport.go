@@ -8,37 +8,36 @@ import (
 
 type ExecutionReport struct {
 	TradeId        string
-	OrderId        string
 	Symbol         string
-	side           Side
-	status         OrderStatus
-	fills          []Fill
-	totalFilledQty decimal.Decimal
-	avgFillPrice   decimal.Decimal
-	totalFees      decimal.Decimal
-	remainingQty   decimal.Decimal
-	rejectReason   string
-	reportTime     time.Time
+	Side           Side
+	Status         OrderStatus
+	Fills          []Fill
+	TotalFilledQty decimal.Decimal
+	AvgFillPrice   decimal.Decimal
+	TotalFees      decimal.Decimal
+	RemainingQty   decimal.Decimal
+	RejectReason   string
+	ReportTime     time.Time
 }
 
 type Fill struct {
-	Time  time.Time
-	Price decimal.Decimal
-	Qty   decimal.Decimal
-	Fee   decimal.Decimal
+	Time     time.Time
+	Price    decimal.Decimal
+	Quantity decimal.Decimal
+	Fee      decimal.Decimal
 }
 
 func NewFill(time time.Time, price, qty, fee decimal.Decimal) Fill {
 	return Fill{
-		Time:  time,
-		Price: price,
-		Qty:   qty,
-		Fee:   fee,
+		Time:     time,
+		Price:    price,
+		Quantity: qty,
+		Fee:      fee,
 	}
 }
 
 func NewExecutionReport(
-	orderID string,
+	tradeID string,
 	symbol string,
 	side Side,
 	status OrderStatus,
@@ -51,16 +50,16 @@ func NewExecutionReport(
 	reportTime time.Time,
 ) ExecutionReport {
 	return ExecutionReport{
-		OrderId:        orderID,
+		TradeId:        tradeID,
 		Symbol:         symbol,
-		side:           side,
-		status:         status,
-		fills:          fills,
-		totalFilledQty: totalFilledQty,
-		avgFillPrice:   avgFillPrice,
-		totalFees:      totalFees,
-		remainingQty:   remainingQty,
-		rejectReason:   rejectReason,
-		reportTime:     reportTime,
+		Side:           side,
+		Status:         status,
+		Fills:          fills,
+		TotalFilledQty: totalFilledQty,
+		AvgFillPrice:   avgFillPrice,
+		TotalFees:      totalFees,
+		RemainingQty:   remainingQty,
+		RejectReason:   rejectReason,
+		ReportTime:     reportTime,
 	}
 }

@@ -120,11 +120,11 @@ func calcNetProfit(executions map[string][]types.ExecutionReport, wg *sync.WaitG
 		hasBuy, hasSell := false, false
 		curGrossProfit, curFees := decimal.Zero, decimal.Zero
 		for _, report := range trades {
-			for _, fill := range report.fills {
+			for _, fill := range report.Fills {
 				curFees = curFees.Add(fill.Fee)
-				value := fill.Qty.Mul(fill.Price)
+				value := fill.Quantity.Mul(fill.Price)
 				// Switch on the sideType owned by the report
-				switch report.side {
+				switch report.Side {
 				case types.SideTypeBuy:
 					curGrossProfit = curGrossProfit.Sub(value)
 					hasBuy = true
@@ -152,11 +152,11 @@ func calcNetAvgProfitPerTrade(executions map[string][]types.ExecutionReport, wg 
 		hasBuy, hasSell := false, false
 		curGrossProfit, curFees := decimal.Zero, decimal.Zero
 		for _, report := range trades {
-			for _, fill := range report.fills {
+			for _, fill := range report.Fills {
 				curFees = curFees.Add(fill.Fee)
-				value := fill.Qty.Mul(fill.Price)
+				value := fill.Quantity.Mul(fill.Price)
 				// Switch on the sideType owned by the report
-				switch report.side {
+				switch report.Side {
 				case types.SideTypeBuy:
 					curGrossProfit = curGrossProfit.Sub(value)
 					hasBuy = true
@@ -196,7 +196,7 @@ func calcCAGR(snapshots []types.PortfolioView, wg *sync.WaitGroup) decimal.Decim
 		return decimal.Zero
 	}
 
-	// Time difference in years (using 365.25 days to account for leap years)
+	// time difference in years (using 365.25 days to account for leap years)
 	duration := endSnap.Time.Sub(startSnap.Time)
 	if duration <= 0 {
 		return decimal.Zero
@@ -232,11 +232,11 @@ func calcAvgWinLossPerTrade(executions map[string][]types.ExecutionReport, wg *s
 		curFees := decimal.Zero
 
 		for _, report := range trades {
-			for _, fill := range report.fills {
+			for _, fill := range report.Fills {
 				curFees = curFees.Add(fill.Fee)
 
-				value := fill.Qty.Mul(fill.Price)
-				switch report.side {
+				value := fill.Quantity.Mul(fill.Price)
+				switch report.Side {
 				case types.SideTypeBuy:
 					curGrossProfit = curGrossProfit.Sub(value)
 					hasBuy = true
@@ -286,7 +286,7 @@ func calcDrawdownMetrics(
 	}
 
 	// Assume snapshots are in chronological order.
-	// If not guaranteed, you should sort them by Time first.
+	// If not guaranteed, you should sort them by time first.
 
 	peak := decimal.Zero
 	var peakTime time.Time
@@ -335,11 +335,11 @@ func calcMaxConsecutiveLosses(executions map[string][]types.ExecutionReport, wg 
 		var closeTime time.Time
 
 		for _, report := range reports {
-			for _, fill := range report.fills {
+			for _, fill := range report.Fills {
 				curFees = curFees.Add(fill.Fee)
 
-				value := fill.Qty.Mul(fill.Price)
-				switch report.side {
+				value := fill.Quantity.Mul(fill.Price)
+				switch report.Side {
 				case types.SideTypeBuy:
 					curGrossProfit = curGrossProfit.Sub(value)
 					hasBuy = true
@@ -347,8 +347,8 @@ func calcMaxConsecutiveLosses(executions map[string][]types.ExecutionReport, wg 
 					curGrossProfit = curGrossProfit.Add(value)
 					hasSell = true
 
-					if report.reportTime.After(closeTime) {
-						closeTime = report.reportTime
+					if report.ReportTime.After(closeTime) {
+						closeTime = report.ReportTime
 					}
 				}
 			}

@@ -9,11 +9,11 @@ type OrderStatus string
 
 const (
 	OrderAccepted        OrderStatus = "ORDER_ACCEPTED"
-	OrderPartiallyFilled             = "ORDER_PARTIALLY_FILLED"
-	OrderFilled                      = "ORDER_FILLED"
-	OrderRejected                    = "ORDER_REJECTED"
-	OrderExpired                     = "ORDER_EXPIRED"
-	OrderCanceled                    = "ORDER_CANCELED"
+	OrderPartiallyFilled OrderStatus = "ORDER_PARTIALLY_FILLED"
+	OrderFilled          OrderStatus = "ORDER_FILLED"
+	OrderRejected        OrderStatus = "ORDER_REJECTED"
+	OrderExpired         OrderStatus = "ORDER_EXPIRED"
+	OrderCanceled        OrderStatus = "ORDER_CANCELED"
 
 	SideTypeBuy  Side = "BUY"
 	SideTypeSell Side = "SELL"

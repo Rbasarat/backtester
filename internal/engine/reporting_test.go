@@ -25,12 +25,12 @@ func TestCalcNetProfit(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0.5"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0.5"),
 							},
 						},
 					},
@@ -43,12 +43,12 @@ func TestCalcNetProfit(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("50"),
-								Qty:   decimal.RequireFromString("2"),
-								Fee:   decimal.RequireFromString("0.1"),
+								Price:    decimal.RequireFromString("50"),
+								Quantity: decimal.RequireFromString("2"),
+								Fee:      decimal.RequireFromString("0.1"),
 							},
 						},
 					},
@@ -61,22 +61,22 @@ func TestCalcNetProfit(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("110"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("110"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
@@ -89,22 +89,22 @@ func TestCalcNetProfit(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("2"),
-								Fee:   decimal.RequireFromString("0"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("2"),
+								Fee:      decimal.RequireFromString("0"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("110"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0"),
+								Price:    decimal.RequireFromString("110"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0"),
 							},
 						},
 					},
@@ -117,56 +117,56 @@ func TestCalcNetProfit(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("110"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("110"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
 				},
 				"trade2": {
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("50"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0"),
+								Price:    decimal.RequireFromString("50"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("60"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0"),
+								Price:    decimal.RequireFromString("60"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0"),
 							},
 						},
 					},
 				},
 				"trade3": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("10"),
-								Qty:   decimal.RequireFromString("5"),
-								Fee:   decimal.RequireFromString("0.1"),
+								Price:    decimal.RequireFromString("10"),
+								Quantity: decimal.RequireFromString("5"),
+								Fee:      decimal.RequireFromString("0.1"),
 							},
 						},
 					},
@@ -207,12 +207,12 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0.5"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0.5"),
 							},
 						},
 					},
@@ -225,22 +225,22 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("110"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("110"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
@@ -253,22 +253,22 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("2"),
-								Fee:   decimal.RequireFromString("0"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("2"),
+								Fee:      decimal.RequireFromString("0"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("110"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0"),
+								Price:    decimal.RequireFromString("110"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0"),
 							},
 						},
 					},
@@ -281,39 +281,39 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("110"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("110"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
 				},
 				"trade2": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("50"),
-								Qty:   decimal.RequireFromString("2"),
-								Fee:   decimal.RequireFromString("0.5"),
+								Price:    decimal.RequireFromString("50"),
+								Quantity: decimal.RequireFromString("2"),
+								Fee:      decimal.RequireFromString("0.5"),
 							},
 							{
-								Price: decimal.RequireFromString("50"),
-								Qty:   decimal.RequireFromString("0"), // example extra fill, not necessary
-								Fee:   decimal.RequireFromString("0.5"),
+								Price:    decimal.RequireFromString("50"),
+								Quantity: decimal.RequireFromString("0"), // example extra fill, not necessary
+								Fee:      decimal.RequireFromString("0.5"),
 							},
 						},
 					},
@@ -326,44 +326,44 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("110"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("110"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
 				},
 				"trade2": {
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("200"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0.5"),
+								Price:    decimal.RequireFromString("200"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0.5"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("150"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0.5"),
+								Price:    decimal.RequireFromString("150"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0.5"),
 							},
 						},
 					},
@@ -622,12 +622,12 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
@@ -641,22 +641,22 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("120"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("120"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
@@ -670,22 +670,22 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("90"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("90"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
@@ -699,44 +699,44 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("120"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("1"),
+								Price:    decimal.RequireFromString("120"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("1"),
 							},
 						},
 					},
 				},
 				"trade2": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("200"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("2"),
+								Price:    decimal.RequireFromString("200"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("2"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("180"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("2"),
+								Price:    decimal.RequireFromString("180"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("2"),
 							},
 						},
 					},
@@ -750,22 +750,22 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0"),
 							},
 						},
 					},
@@ -779,22 +779,22 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side: types.SideTypeBuy,
-						fills: []types.Fill{
+						Side: types.SideTypeBuy,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("2"),
-								Fee:   decimal.RequireFromString("0"),
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("2"),
+								Fee:      decimal.RequireFromString("0"),
 							},
 						},
 					},
 					{
-						side: types.SideTypeSell,
-						fills: []types.Fill{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("150"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0"),
+								Price:    decimal.RequireFromString("150"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0"),
 							},
 						},
 					},
@@ -967,89 +967,89 @@ func TestCalcMaxConsecutiveLosses(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(1 * time.Hour),
-						fills: []types.Fill{
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(1 * time.Hour),
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0")},
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0")},
 						},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(2 * time.Hour),
-						fills: []types.Fill{
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(2 * time.Hour),
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("99"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0")},
+								Price:    decimal.RequireFromString("99"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0")},
 						},
 					},
 				},
 				"trade2": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(1 * time.Hour),
-						fills: []types.Fill{
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(1 * time.Hour),
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0")},
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0")},
 						},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(3 * time.Hour),
-						fills: []types.Fill{
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(3 * time.Hour),
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("1000"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0")},
+								Price:    decimal.RequireFromString("1000"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0")},
 						},
 					},
 				},
 				"trade3": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(1 * time.Hour),
-						fills: []types.Fill{
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(1 * time.Hour),
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0")},
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0")},
 						},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(4 * time.Hour),
-						fills: []types.Fill{
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(4 * time.Hour),
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("99"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0")},
+								Price:    decimal.RequireFromString("99"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0")},
 						},
 					},
 				},
 				"trade4": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(1 * time.Hour),
-						fills: []types.Fill{
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(1 * time.Hour),
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0")},
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0")},
 						},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(5 * time.Hour),
-						fills: []types.Fill{
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(5 * time.Hour),
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("99"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0")},
+								Price:    decimal.RequireFromString("99"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0")},
 						},
 					},
 				},
@@ -1061,25 +1061,25 @@ func TestCalcMaxConsecutiveLosses(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(1 * time.Hour),
-						fills: []types.Fill{
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(1 * time.Hour),
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0")},
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0")},
 						},
 					},
 				},
 				"trade2": {
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(2 * time.Hour),
-						fills: []types.Fill{
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(2 * time.Hour),
+						Fills: []types.Fill{
 							{
-								Price: decimal.RequireFromString("100"),
-								Qty:   decimal.RequireFromString("1"),
-								Fee:   decimal.RequireFromString("0")},
+								Price:    decimal.RequireFromString("100"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0")},
 						},
 					},
 				},
@@ -1091,49 +1091,49 @@ func TestCalcMaxConsecutiveLosses(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(1 * time.Hour),
-						fills: []types.Fill{
-							{Price: decimal.RequireFromString("100"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(1 * time.Hour),
+						Fills: []types.Fill{
+							{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
 						},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(2 * time.Hour), // closeTime
-						fills: []types.Fill{
-							{Price: decimal.RequireFromString("90"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(2 * time.Hour), // closeTime
+						Fills: []types.Fill{
+							{Price: decimal.RequireFromString("90"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
 						},
 					},
 				},
 				"trade2": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(3 * time.Hour),
-						fills: []types.Fill{
-							{Price: decimal.RequireFromString("200"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(3 * time.Hour),
+						Fills: []types.Fill{
+							{Price: decimal.RequireFromString("200"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
 						},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(4 * time.Hour),
-						fills: []types.Fill{
-							{Price: decimal.RequireFromString("150"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(4 * time.Hour),
+						Fills: []types.Fill{
+							{Price: decimal.RequireFromString("150"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
 						},
 					},
 				},
 				"trade3": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(5 * time.Hour),
-						fills: []types.Fill{
-							{Price: decimal.RequireFromString("300"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(5 * time.Hour),
+						Fills: []types.Fill{
+							{Price: decimal.RequireFromString("300"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
 						},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(6 * time.Hour),
-						fills: []types.Fill{
-							{Price: decimal.RequireFromString("250"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(6 * time.Hour),
+						Fills: []types.Fill{
+							{Price: decimal.RequireFromString("250"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
 						},
 					},
 				},
@@ -1145,74 +1145,74 @@ func TestCalcMaxConsecutiveLosses(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"trade1": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(1 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(1 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(2 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("120"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(2 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("120"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
 				"trade2": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(3 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(3 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(4 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("90"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(4 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("90"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
 				"trade3": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(5 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(5 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(6 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("80"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(6 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("80"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
 				"trade4": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(7 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(7 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(8 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(8 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
 				"trade5": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(9 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(9 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(10 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("90"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(10 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("90"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
 				"trade6": {
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(11 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(11 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(12 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("80"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(12 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("80"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
 			},
@@ -1223,38 +1223,38 @@ func TestCalcMaxConsecutiveLosses(t *testing.T) {
 			executions: map[string][]types.ExecutionReport{
 				"tradeA": { // closes second
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(2 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(2 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(4 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("90"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}}, // loss
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(4 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("90"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}}, // loss
 					},
 				},
 				"tradeB": { // closes first
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(1 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(1 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(3 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("80"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}}, // deeper loss
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(3 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("80"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}}, // deeper loss
 					},
 				},
 				"tradeC": { // closes last
 					{
-						side:       types.SideTypeBuy,
-						reportTime: baseTime.Add(5 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
+						Side:       types.SideTypeBuy,
+						ReportTime: baseTime.Add(5 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 					{
-						side:       types.SideTypeSell,
-						reportTime: baseTime.Add(6 * time.Hour),
-						fills:      []types.Fill{{Price: decimal.RequireFromString("120"), Qty: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}}, // win
+						Side:       types.SideTypeSell,
+						ReportTime: baseTime.Add(6 * time.Hour),
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("120"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}}, // win
 					},
 				},
 			},

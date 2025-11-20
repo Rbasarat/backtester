@@ -5,7 +5,7 @@ import (
 )
 
 type ExecutionContext struct {
-	Candles   map[string]map[time.Time]Candle
+	Candles   map[string][]Candle
 	Portfolio PortfolioView
 	CurTime   time.Time
 }

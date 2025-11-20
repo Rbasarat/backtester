@@ -99,7 +99,6 @@ func TestBacktester_GetExecutionContext_ClampsWindow_NoPanics(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			bt := &backtester{
 				curTime: time.UnixMilli(42),
@@ -120,7 +119,14 @@ func TestBacktester_GetExecutionContext_ClampsWindow_NoPanics(t *testing.T) {
 			}
 			for _, ms := range tc.wantTS {
 				ts := time.UnixMilli(ms)
-				if _, ok := sub[ts]; !ok {
+				found := false
+				for _, candle := range sub {
+					if candle.Timestamp.Equal(ts) {
+						found = true
+						break
+					}
+				}
+				if !found {
 					t.Fatalf("missing timestamp %d (UnixMilli)", ms)
 				}
 			}
@@ -161,20 +167,27 @@ func TestBacktester_GetExecutionContext_MixedTickers_Clamping(t *testing.T) {
 			t.Fatalf("%s: len=%d, want=%d", ticker, len(sub), len(tsList))
 		}
 		for _, ms := range tsList {
-			if _, ok := sub[time.UnixMilli(ms)]; !ok {
-				t.Fatalf("%s: missing %d", ticker, ms)
+			found := false
+			for _, candle := range sub {
+				if candle.Timestamp.Equal(time.UnixMilli(ms)) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Fatalf("%s: missing timestamp %d (UnixMilli)", ticker, ms)
 			}
 		}
 	}
 
 	// Quick structural check using DeepEqual on expected candles for GOOG
 	gotGOOG := got.Candles["GOOG"]
-	wantGOOG := map[time.Time]types.Candle{
-		time.UnixMilli(100): goog[0],
-		time.UnixMilli(101): goog[1],
+	wantGOOG := []types.Candle{
+		goog[0],
+		goog[1],
 	}
 	if !reflect.DeepEqual(gotGOOG, wantGOOG) {
-		t.Fatalf("GOOG map mismatch:\n got=%v\nwant=%v", gotGOOG, wantGOOG)
+		t.Fatalf("GOOG slice mismatch:\n got=%v\nwant=%v", gotGOOG, wantGOOG)
 	}
 }
 
@@ -209,106 +222,36 @@ func TestBacktester_GetExecutionContext_SlicesAndMapsByTicker(t *testing.T) {
 		t.Errorf("CurTime mismatch: got %v, want %v", got.CurTime, bt.curTime)
 	}
 
-	// Expect per-ticker map windows
-	want := map[string]map[time.Time]types.Candle{
-		"AAPL": {
-			time.UnixMilli(1): aaplFeed[1],
-			time.UnixMilli(2): aaplFeed[2],
-			time.UnixMilli(3): aaplFeed[3],
-		},
-		"GOOG": {
-			time.UnixMilli(102): googFeed[2],
-			time.UnixMilli(103): googFeed[3],
-			time.UnixMilli(104): googFeed[4],
-		},
+	// Expect per-ticker slice windows:
+	// AAPL: index 2 with 1 before, 2 after -> [1,2,3]
+	// GOOG: index 3 with 1 before, 2 after -> [2,3,4]
+	want := map[string][]types.Candle{
+		"AAPL": {aaplFeed[1], aaplFeed[2], aaplFeed[3]},
+		"GOOG": {googFeed[2], googFeed[3], googFeed[4]},
 	}
 
 	if got.Candles == nil {
-		t.Fatalf("Candles is nil; expected populated map (did you assign ctx.Candles = candlesMap?)")
+		t.Fatalf("Candles is nil; expected populated map (did you assign ctx.Candles?)")
 	}
 	if len(got.Candles) != len(want) {
 		t.Fatalf("top-level tickers len(got)=%d, want=%d", len(got.Candles), len(want))
 	}
 
-	for ticker, wantMap := range want {
+	for ticker, wantSlice := range want {
 		sub, ok := got.Candles[ticker]
 		if !ok {
 			t.Errorf("missing ticker %q in Candles", ticker)
+			continue
 		}
-		if len(sub) != len(wantMap) {
-			t.Errorf("%s: submap len(got)=%d, want=%d", ticker, len(sub), len(wantMap))
+		if len(sub) != len(wantSlice) {
+			t.Errorf("%s: slice len(got)=%d, want=%d", ticker, len(sub), len(wantSlice))
+			continue
 		}
-		for ts, wantC := range wantMap {
-			gotC, ok := sub[ts]
-			if !ok {
-				t.Errorf("%s: missing timestamp %v", ticker, ts)
-			}
-			if !reflect.DeepEqual(gotC, wantC) {
-				t.Errorf("%s @ %v: got %+v, want %+v", ticker, ts, gotC, wantC)
+		for i := range wantSlice {
+			if !reflect.DeepEqual(sub[i], wantSlice[i]) {
+				t.Errorf("%s[%d]: got %+v, want %+v", ticker, i, sub[i], wantSlice[i])
 			}
 		}
-	}
-}
-
-func TestCreateMapFromCandles(t *testing.T) {
-	// Simple consecutive timestamps for clarity
-	t1 := time.UnixMilli(0)
-	t2 := time.UnixMilli(1)
-	t3 := time.UnixMilli(2)
-
-	d := func(i int64) decimal.Decimal { return decimal.NewFromInt(i) }
-
-	c1 := types.Candle{AssetId: 1, Open: d(1), Close: d(2), High: d(3), Low: d(0), Volume: d(10), Interval: testInterval, Timestamp: t1}
-	c2 := types.Candle{AssetId: 1, Open: d(2), Close: d(3), High: d(4), Low: d(1), Volume: d(20), Interval: testInterval, Timestamp: t2}
-	c3 := types.Candle{AssetId: 2, Open: d(3), Close: d(4), High: d(5), Low: d(2), Volume: d(30), Interval: testInterval, Timestamp: t3}
-	c2Overwrite := types.Candle{AssetId: 99, Open: d(9), Close: d(9), High: d(9), Low: d(9), Volume: d(99), Interval: testInterval, Timestamp: t2}
-
-	tests := []struct {
-		name string
-		in   []types.Candle
-		want map[time.Time]types.Candle
-	}{
-		{
-			name: "empty slice",
-			in:   nil,
-			want: map[time.Time]types.Candle{},
-		},
-		{
-			name: "single candle",
-			in:   []types.Candle{c1},
-			want: map[time.Time]types.Candle{t1: c1},
-		},
-		{
-			name: "multiple unique timestamps",
-			in:   []types.Candle{c1, c2, c3},
-			want: map[time.Time]types.Candle{t1: c1, t2: c2, t3: c3},
-		},
-		{
-			name: "duplicate timestamp overwrites with last occurrence",
-			in:   []types.Candle{c1, c2, c2Overwrite, c3},
-			want: map[time.Time]types.Candle{t1: c1, t2: c2Overwrite, t3: c3},
-		},
-	}
-
-	for _, tc := range tests {
-		tc := tc // capture range variable
-		t.Run(tc.name, func(t *testing.T) {
-			got := createMapFromCandles(tc.in)
-
-			if len(got) != len(tc.want) {
-				t.Errorf("len(got)=%d, len(want)=%d, got=%v", len(got), len(tc.want), got)
-			}
-
-			for ts, wantC := range tc.want {
-				gotC, ok := got[ts]
-				if !ok {
-					t.Errorf("missing timestamp %v in result", ts)
-				}
-				if !reflect.DeepEqual(gotC, wantC) {
-					t.Errorf("for timestamp %v:\n got  %+v\n want %+v", ts, gotC, wantC)
-				}
-			}
-		})
 	}
 }
 
@@ -758,7 +701,7 @@ func (m *mockAllocator) Init(api PortfolioApi) error {
 	return nil
 }
 
-func (m *mockAllocator) Allocate(signals []Signal, view types.PortfolioView) []types.Order {
+func (m *mockAllocator) Allocate(signals []types.Signal, view types.PortfolioView) []types.Order {
 	m.callCount++
 	return nil
 }
@@ -807,7 +750,7 @@ type candlesReceivedStrategy struct {
 func (t *candlesReceivedStrategy) Init(api PortfolioApi) error {
 	return nil
 }
-func (t *candlesReceivedStrategy) OnCandle(candle types.Candle) []Signal {
+func (t *candlesReceivedStrategy) OnCandle(candle types.Candle) []types.Signal {
 	t.receivedCandles = append(t.receivedCandles, candle)
 	t.receivedCount++
 	return nil
@@ -826,7 +769,7 @@ func newCandlesParallelismStrategy() *candlesParallelismStrategy {
 func (s *candlesParallelismStrategy) Init(api PortfolioApi) error {
 	return nil
 }
-func (s *candlesParallelismStrategy) OnCandle(c types.Candle) []Signal {
+func (s *candlesParallelismStrategy) OnCandle(c types.Candle) []types.Signal {
 	// Send the candle
 	s.sent <- c
 	// Then wait for wrap up after all candles are received
@@ -843,11 +786,11 @@ func (a *allocatorStrategy) Init(api PortfolioApi) error {
 	return nil
 }
 
-func (a *allocatorStrategy) OnCandle(candle types.Candle) []Signal {
-	var signals []Signal
+func (a *allocatorStrategy) OnCandle(candle types.Candle) []types.Signal {
+	var signals []types.Signal
 	if a.allocatorCalled < a.callAllocator {
 		for i := range a.callAllocator {
-			signals = append(signals, Signal{createdAt: time.UnixMilli(int64(i))})
+			signals = append(signals, types.Signal{CreatedAt: time.UnixMilli(int64(i))})
 		}
 		a.allocatorCalled++
 	}

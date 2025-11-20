@@ -61,44 +61,44 @@ func (p *portfolio) processExecutions(execs []types.ExecutionReport) error {
 	}
 
 	sort.Slice(execs, func(i, j int) bool {
-		return execs[i].reportTime.Before(execs[j].reportTime)
+		return execs[i].ReportTime.Before(execs[j].ReportTime)
 	})
 
 	for _, er := range execs {
-		if len(er.fills) == 0 {
+		if len(er.Fills) == 0 {
 			continue
 		}
 
 		// Validate side once per execution report
-		if er.side != types.SideTypeBuy && er.side != types.SideTypeSell {
+		if er.Side != types.SideTypeBuy && er.Side != types.SideTypeSell {
 			return UnknownSideErr
 		}
 
 		// Precompute side sign: +1 for BUY, -1 for SELL
 		sideSign := decimal.NewFromInt(1)
-		if er.side == types.SideTypeSell {
+		if er.Side == types.SideTypeSell {
 			sideSign = sideSign.Neg()
 		}
 
-		fills := append([]types.Fill(nil), er.fills...)
+		fills := append([]types.Fill(nil), er.Fills...)
 		sort.Slice(fills, func(i, j int) bool {
 			return fills[i].Time.Before(fills[j].Time)
 		})
 
-		pos := p.positions[er.symbol]
+		pos := p.positions[er.Symbol]
 		if pos == nil {
 			// Create new position if it doesn't exist
-			pos = &Position{Symbol: er.symbol}
-			p.positions[er.symbol] = pos
+			pos = &Position{Symbol: er.Symbol}
+			p.positions[er.Symbol] = pos
 		}
 
 		for _, fill := range fills {
-			if fill.Qty.IsNegative() {
+			if fill.Quantity.IsNegative() {
 				return NegativeQtyErr
 			}
 
 			// Set qty to negative if we have types.SideTypeSell
-			quantity := fill.Qty.Mul(sideSign)
+			quantity := fill.Quantity.Mul(sideSign)
 
 			cashDelta := fill.Price.Mul(quantity).Neg()
 			newCash := p.cash.Add(cashDelta).Sub(fill.Fee)
