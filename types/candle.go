@@ -8,6 +8,7 @@ import (
 
 type Candle struct {
 	AssetId   int             `json:"id"`
+	Ticker    string          `json:"ticker"`
 	Open      decimal.Decimal `json:"open"`
 	Close     decimal.Decimal `json:"close"`
 	High      decimal.Decimal `json:"high" `

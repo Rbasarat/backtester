@@ -16,7 +16,7 @@ var bucketToInterval = map[types.Interval]string{
 	types.Day:           "1 day",
 }
 
-func (db *Database) GetAggregates(assetId int, interval types.Interval, start, end time.Time, ctx context.Context) ([]types.Candle, error) {
+func (db *Database) GetAggregates(assetId int, ticker string, interval types.Interval, start, end time.Time, ctx context.Context) ([]types.Candle, error) {
 	bucket, ok := bucketToInterval[interval]
 	if !ok {
 		return nil, ErrIntervalNotSupported
@@ -37,14 +37,15 @@ func (db *Database) GetAggregates(assetId int, interval types.Interval, start, e
 	if len(candles) == 0 {
 		return nil, ErrNoCandles
 	}
-	return convertCandles(candles, interval), nil
+	return convertCandles(candles, interval, ticker), nil
 }
 
-func convertCandles(candleDAOs []sqlc.GetAggregatesRow, interval types.Interval) []types.Candle {
+func convertCandles(candleDAOs []sqlc.GetAggregatesRow, interval types.Interval, ticker string) []types.Candle {
 	var candles []types.Candle
 	for _, dao := range candleDAOs {
 		candles = append(candles, types.Candle{
 			AssetId:   int(dao.AssetID),
+			Ticker:    ticker,
 			Open:      dao.Open,
 			Close:     dao.Close,
 			High:      dao.High,

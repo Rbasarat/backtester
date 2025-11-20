@@ -56,7 +56,7 @@ func (b *backtester) run() error {
 			b.executionIndex[feed.ticker] = advanceFeedIndex(b.executionConfig.candles[feed.ticker], b.executionIndex[feed.ticker], b.curTime)
 		}
 
-		orders := b.allocator.Allocate(signals, b.portfolio.GetPortfolioSnapshot(b.curTime))
+		orders := b.allocator.Allocate(signals, b.portfolio.GetPortfolioSnapshot())
 		executions := b.broker.Execute(orders, b.getExecutionContext())
 		err := b.portfolio.processExecutions(executions)
 		if err != nil {
@@ -65,7 +65,9 @@ func (b *backtester) run() error {
 
 		// Create a snapshot of the portfolio every day
 		if b.curTime.Hour() == 0 && b.curTime.Minute() == 0 {
-			b.portfolio.snapshots = append(b.portfolio.snapshots, b.portfolio.GetPortfolioSnapshot(b.curTime))
+			curSnapshot := b.portfolio.GetPortfolioSnapshot()
+			curSnapshot.Time = b.curTime
+			b.portfolio.snapshots = append(b.portfolio.snapshots, curSnapshot)
 		}
 
 		// We use time.Minute here because the lowest timeframe we have is minute
@@ -93,7 +95,7 @@ func (b *backtester) getExecutionContext() types.ExecutionContext {
 		candlesMap[ticker] = candles
 	}
 	ctx.Candles = candlesMap
-	ctx.Portfolio = b.portfolio.GetPortfolioSnapshot(b.curTime)
+	ctx.Portfolio = b.portfolio.GetPortfolioSnapshot()
 	return ctx
 }
 
@@ -114,6 +116,10 @@ func getGlobalTimeRange(feeds []*DataFeedConfig) (time.Time, time.Time) {
 		}
 	}
 	return minStart, maxEnd
+}
+
+func (b *backtester) getCurrentTime() time.Time {
+	return b.curTime
 }
 
 // Index only goes one way

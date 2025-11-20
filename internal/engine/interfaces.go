@@ -8,7 +8,7 @@ import (
 
 type dataStore interface {
 	GetAssetByTicker(ticker string, ctx context.Context) (*types.Asset, error)
-	GetAggregates(assetId int, interval types.Interval, start, end time.Time, ctx context.Context) ([]types.Candle, error)
+	GetAggregates(assetId int, ticker string, interval types.Interval, start, end time.Time, ctx context.Context) ([]types.Candle, error)
 }
 
 type strategy interface {
@@ -28,4 +28,8 @@ type broker interface {
 type PortfolioApi interface {
 	GetPortfolioSnapshot() types.PortfolioView
 	GetFillsForTrade(tradeId string) []types.Fill
+}
+
+type backtesterApi interface {
+	getCurrentTime() time.Time
 }

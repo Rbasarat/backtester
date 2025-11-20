@@ -47,7 +47,7 @@ func (e *Engine) printReport(report *Report) {
 
 	fmt.Println("===== Trading Report =====")
 	fmt.Printf("Start Date:            %s\n", report.StartDate.Format("2006-01-02"))
-	fmt.Printf("Total Period:          %v\n", report.TotalPeriod)
+	fmt.Printf("Total Period:          %d days\n", report.TotalPeriod/(24*time.Hour))
 	fmt.Printf("Total Trades:          %d\n", report.TotalTrades)
 
 	fmt.Println("\n-- Absolute Performance --")

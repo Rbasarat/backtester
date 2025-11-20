@@ -25,7 +25,7 @@ func TestBacktest_BacktesterBrokerUpdatePortfolio(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error running backtester: %v", err)
 	}
-	portfolioSnapshot := engine.portfolio.GetPortfolioSnapshot(time.UnixMilli(1))
+	portfolioSnapshot := engine.portfolio.GetPortfolioSnapshot()
 	pos, ok := portfolioSnapshot.Positions["AAPL"]
 	if !ok {
 		t.Fatalf("expected portfolio position AAPL but was nil")
@@ -110,6 +110,7 @@ func TestBacktester_GetExecutionContext_ClampsWindow_NoPanics(t *testing.T) {
 				portfolio:      newPortfolio(decimal.NewFromInt(1000), true),
 				executionIndex: map[string]int{"TICK": tc.index},
 			}
+			bt.portfolio.backtesterApi = bt
 
 			got := bt.getExecutionContext()
 
@@ -154,6 +155,7 @@ func TestBacktester_GetExecutionContext_MixedTickers_Clamping(t *testing.T) {
 			"GOOG": 0, // start=-1->0; end=2 -> selects 100,101
 		},
 	}
+	bt.portfolio.backtesterApi = bt
 
 	got := bt.getExecutionContext()
 	want := map[string][]int64{
@@ -214,7 +216,7 @@ func TestBacktester_GetExecutionContext_SlicesAndMapsByTicker(t *testing.T) {
 		executionConfig: &cfg,
 		executionIndex:  idx,
 	}
-
+	bt.portfolio.backtesterApi = bt
 	got := bt.getExecutionContext()
 
 	// CurTime should be forwarded
@@ -722,7 +724,7 @@ func mockCandle(assetId int, ts time.Time) types.Candle {
 	return types.Candle{AssetId: assetId, Timestamp: ts}
 }
 
-func (m mockDb) GetAggregates(assetId int, interval types.Interval, start, end time.Time, ctx context.Context) ([]types.Candle, error) {
+func (m mockDb) GetAggregates(assetId int, ticker string, interval types.Interval, start, end time.Time, ctx context.Context) ([]types.Candle, error) {
 	var candles []types.Candle
 	curTime := start
 	for curTime.Before(end) {

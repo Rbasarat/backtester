@@ -4,7 +4,6 @@ import (
 	"backtester/types"
 	"errors"
 	"sort"
-	"time"
 
 	"github.com/shopspring/decimal"
 )
@@ -20,14 +19,25 @@ type portfolio struct {
 	executions        []types.ExecutionReport
 	realizedPnL       decimal.Decimal
 	snapshots         []types.PortfolioView
+	backtesterApi     backtesterApi
 	allowShortSelling bool
 }
 
+func (p *portfolio) GetFillsForTrade(tradeId string) []types.Fill {
+	var fills []types.Fill
+	for _, report := range p.executions {
+		if report.TradeId == tradeId {
+			fills = append(fills, report.Fills...)
+		}
+	}
+	return fills
+}
+
 type Position struct {
-	Symbol    string
-	Quantity  decimal.Decimal
-	AvgCost   decimal.Decimal
-	LastPrice decimal.Decimal
+	Symbol             string
+	Quantity           decimal.Decimal
+	AvgCost            decimal.Decimal
+	LastExecutionPrice decimal.Decimal
 }
 
 func newPortfolio(initialCash decimal.Decimal, allowShortSelling bool) *portfolio {
@@ -38,18 +48,18 @@ func newPortfolio(initialCash decimal.Decimal, allowShortSelling bool) *portfoli
 	}
 }
 
-func (p *portfolio) GetPortfolioSnapshot(curTime time.Time) types.PortfolioView {
+func (p *portfolio) GetPortfolioSnapshot() types.PortfolioView {
 	view := types.PortfolioView{
 		Cash:      p.cash,
 		Positions: make(map[string]types.PositionSnapshot),
-		Time:      curTime,
+		Time:      p.backtesterApi.getCurrentTime(),
 	}
 
 	for sym, pos := range p.positions {
 		view.Positions[sym] = types.PositionSnapshot{
 			Symbol:    pos.Symbol,
 			Quantity:  pos.Quantity,
-			LastPrice: pos.LastPrice,
+			LastPrice: pos.LastExecutionPrice,
 		}
 	}
 	return view
@@ -145,7 +155,7 @@ func (p *portfolio) processExecutions(execs []types.ExecutionReport) error {
 				pos.AvgCost = fill.Price
 			}
 
-			pos.LastPrice = fill.Price
+			pos.LastExecutionPrice = fill.Price
 		}
 
 		// Store the full execution report for audit / reporting

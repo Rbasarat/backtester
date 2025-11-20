@@ -6,9 +6,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/shopspring/decimal"
 	"testing"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 var testInterval = types.OneMinute
@@ -46,7 +47,7 @@ func TestDatabase_GetCandles(t *testing.T) {
 					sqlError: tt.sqlErr,
 				},
 			}
-			got, err := db.GetAggregates(tt.args.assetId, tt.args.interval, tt.args.start, tt.args.end, context.Background())
+			got, err := db.GetAggregates(tt.args.assetId, "AAPL", tt.args.interval, tt.args.start, tt.args.end, context.Background())
 
 			if err != nil {
 				if !errors.Is(err, tt.wantErr) {

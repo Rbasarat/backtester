@@ -27,7 +27,10 @@ func NewEngine(
 	broker broker,
 	portfolioConfig *PortfolioConfig, db dataStore) *Engine {
 
+	// This is an ugly hack where backtester and portfolio depend on eachother.. we need to figure out how to expose currentTime
 	initPortfolio := newPortfolio(portfolioConfig.initialCash, portfolioConfig.allowShortSelling)
+	backtester := newBacktester(feeds, executionConfig, portfolioConfig, strat, sizer, broker, initPortfolio)
+	initPortfolio.backtesterApi = backtester
 
 	return &Engine{
 		db:              db,
@@ -55,6 +58,17 @@ func (e *Engine) Run() error {
 	if err != nil {
 		return err
 	}
+
+	// Inititalize strategy
+	err = e.strategy.Init(e.backtester.portfolio)
+	if err != nil {
+		return err
+	}
+	err = e.allocator.Init(e.backtester.portfolio)
+	if err != nil {
+		return err
+	}
+	
 	// Do the run loop
 	err = e.backtester.run()
 	if err != nil {
@@ -74,7 +88,7 @@ func (e *Engine) loadFeedData() error {
 		if err != nil {
 			return err
 		}
-		cs, err := e.db.GetAggregates(asset.Id, feed.interval, feed.start, feed.end, ctx)
+		cs, err := e.db.GetAggregates(asset.Id, asset.Ticker, feed.interval, feed.start, feed.end, ctx)
 		if err != nil {
 			return err
 		}
@@ -90,7 +104,7 @@ func (e *Engine) loadExecutionFeedData() error {
 		if err != nil {
 			return err
 		}
-		cs, err := e.db.GetAggregates(asset.Id, feed.interval, feed.start, feed.end, ctx)
+		cs, err := e.db.GetAggregates(asset.Id, asset.Ticker, feed.interval, feed.start, feed.end, ctx)
 		if err != nil {
 			return err
 		}
