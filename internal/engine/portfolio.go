@@ -23,10 +23,10 @@ type portfolio struct {
 	allowShortSelling bool
 }
 
-func (p *portfolio) GetFillsForTrade(tradeId string) []types.Fill {
+func (p *portfolio) GetFillsForTicker(ticker string) []types.Fill {
 	var fills []types.Fill
 	for _, report := range p.executions {
-		if report.TradeId == tradeId {
+		if report.Ticker == ticker {
 			fills = append(fills, report.Fills...)
 		}
 	}
@@ -95,11 +95,11 @@ func (p *portfolio) processExecutions(execs []types.ExecutionReport) error {
 			return fills[i].Time.Before(fills[j].Time)
 		})
 
-		pos := p.positions[er.Symbol]
+		pos := p.positions[er.Ticker]
 		if pos == nil {
 			// Create new position if it doesn't exist
-			pos = &Position{Symbol: er.Symbol}
-			p.positions[er.Symbol] = pos
+			pos = &Position{Symbol: er.Ticker}
+			p.positions[er.Ticker] = pos
 		}
 
 		for _, fill := range fills {

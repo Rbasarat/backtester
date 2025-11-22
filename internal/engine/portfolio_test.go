@@ -141,7 +141,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				positions: map[string]*Position{},
 			},
 			execs: []types.ExecutionReport{
-				{Symbol: "AAPL", Side: types.SideTypeBuy, Fills: nil},
+				{Ticker: "AAPL", Side: types.SideTypeBuy, Fills: nil},
 			},
 			wantPortfolio: portfolio{
 				cash:      decimal.NewFromFloat(100),
@@ -209,10 +209,9 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 			},
 			execs: []types.ExecutionReport{
 				{
-					TradeId: "order-1",
-					Symbol:  "AAPL",
-					Side:    types.SideTypeBuy,
-					Status:  types.OrderFilled,
+					Ticker: "AAPL",
+					Side:   types.SideTypeBuy,
+					Status: types.OrderFilled,
 					Fills: []types.Fill{
 						{
 							Time:     time.UnixMilli(1),
@@ -256,10 +255,9 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 			},
 			execs: []types.ExecutionReport{
 				{
-					TradeId: "order-1",
-					Symbol:  "AAPL",
-					Side:    types.SideTypeBuy,
-					Status:  types.OrderFilled,
+					Ticker: "AAPL",
+					Side:   types.SideTypeBuy,
+					Status: types.OrderFilled,
 					Fills: []types.Fill{
 						{
 							Time:     time.UnixMilli(1),
@@ -275,10 +273,9 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					ReportTime:     time.UnixMilli(1),
 				},
 				{
-					TradeId: "order-2",
-					Symbol:  "AAPL",
-					Side:    types.SideTypeBuy,
-					Status:  types.OrderFilled,
+					Ticker: "AAPL",
+					Side:   types.SideTypeBuy,
+					Status: types.OrderFilled,
 					Fills: []types.Fill{
 						{
 							Time:     time.UnixMilli(2),
@@ -315,10 +312,9 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 			},
 			execs: []types.ExecutionReport{
 				{
-					TradeId: "order-2",
-					Symbol:  "AAPL",
-					Side:    types.SideTypeBuy,
-					Status:  types.OrderFilled,
+					Ticker: "AAPL",
+					Side:   types.SideTypeBuy,
+					Status: types.OrderFilled,
 					Fills: []types.Fill{
 						{
 							Time:     time.UnixMilli(2),
@@ -334,10 +330,9 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					ReportTime:     time.UnixMilli(2),
 				},
 				{
-					TradeId: "order-1",
-					Symbol:  "AAPL",
-					Side:    types.SideTypeBuy,
-					Status:  types.OrderFilled,
+					Ticker: "AAPL",
+					Side:   types.SideTypeBuy,
+					Status: types.OrderFilled,
 					Fills: []types.Fill{
 						{
 							Time:     time.UnixMilli(1),
@@ -380,10 +375,9 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 			},
 			execs: []types.ExecutionReport{
 				{
-					TradeId: "order-oversell",
-					Symbol:  "AAPL",
-					Side:    types.SideTypeSell,
-					Status:  types.OrderFilled,
+					Ticker: "AAPL",
+					Side:   types.SideTypeSell,
+					Status: types.OrderFilled,
 					Fills: []types.Fill{
 						{
 							Time:     time.Date(2025, time.January, 2, 10, 1, 0, 0, time.UTC),
@@ -564,8 +558,7 @@ func newExecutionReport(symbol string, side types.Side, fills ...types.Fill) typ
 	}
 
 	return types.ExecutionReport{
-		TradeId:        "X",
-		Symbol:         symbol,
+		Ticker:         symbol,
 		Side:           side,
 		Status:         types.OrderFilled,
 		Fills:          fills,

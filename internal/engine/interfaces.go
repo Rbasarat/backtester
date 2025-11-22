@@ -27,7 +27,7 @@ type broker interface {
 
 type PortfolioApi interface {
 	GetPortfolioSnapshot() types.PortfolioView
-	GetFillsForTrade(tradeId string) []types.Fill
+	GetFillsForTicker(tradeId string) []types.Fill
 }
 
 type backtesterApi interface {

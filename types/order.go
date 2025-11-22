@@ -7,7 +7,6 @@ import (
 )
 
 type Order struct {
-	TradeId   string
 	Symbol    string
 	Price     decimal.Decimal
 	Quantity  decimal.Decimal
@@ -17,7 +16,6 @@ type Order struct {
 }
 
 func NewOrder(
-	tradeID string,
 	symbol string,
 	price decimal.Decimal,
 	quantity decimal.Decimal,
@@ -26,7 +24,6 @@ func NewOrder(
 	createdAt time.Time,
 ) Order {
 	return Order{
-		TradeId:   tradeID,
 		Symbol:    symbol,
 		Price:     price,
 		Quantity:  quantity,

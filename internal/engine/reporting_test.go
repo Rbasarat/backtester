@@ -2,6 +2,7 @@ package engine
 
 import (
 	"backtester/types"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -11,20 +12,20 @@ import (
 
 func TestCalcNetProfit(t *testing.T) {
 	tests := []struct {
-		name       string
-		executions map[string][]types.ExecutionReport
-		want       decimal.Decimal
+		name   string
+		trades []trade
+		want   decimal.Decimal
 	}{
 		{
-			name:       "no executions -> zero",
-			executions: map[string][]types.ExecutionReport{},
-			want:       decimal.RequireFromString("0"),
+			name:   "no executions -> zero",
+			trades: []trade{},
+			want:   decimal.RequireFromString("0"),
 		},
 		{
-			name: "only buys -> unrealized -> zero",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			name: "only buys -> unrealized -> only fees",
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -34,15 +35,18 @@ func TestCalcNetProfit(t *testing.T) {
 							},
 						},
 					},
+					sell: nil,
 				},
 			},
+			// grossProfit = 0 (unrealized), fees = 0.5 -> net = -0.5
 			want: decimal.RequireFromString("-0.5"),
 		},
 		{
-			name: "only sells -> unrealized -> zero",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			name: "only sells -> unrealized -> only fees",
+			trades: []trade{
+				{
+					buy: nil,
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -54,13 +58,14 @@ func TestCalcNetProfit(t *testing.T) {
 					},
 				},
 			},
+			// grossProfit = 0 (unrealized), fees = 0.1 -> net = -0.1
 			want: decimal.RequireFromString("-0.1"),
 		},
 		{
 			name: "simple realized long trade (buy then sell, with fees)",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -70,7 +75,7 @@ func TestCalcNetProfit(t *testing.T) {
 							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -82,13 +87,14 @@ func TestCalcNetProfit(t *testing.T) {
 					},
 				},
 			},
+			// gross = -100 + 110 = 10, fees = 2 -> net = 8
 			want: decimal.RequireFromString("8"),
 		},
 		{
 			name: "partially closed position still counted as realized (has buy and sell)",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -98,7 +104,7 @@ func TestCalcNetProfit(t *testing.T) {
 							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -110,13 +116,15 @@ func TestCalcNetProfit(t *testing.T) {
 					},
 				},
 			},
+			// gross = -200 + 110 = -90, fees = 0 -> net = -90
 			want: decimal.RequireFromString("-90"),
 		},
 		{
 			name: "multiple trades: some realized, some not",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				// trade1: realized long
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -126,7 +134,7 @@ func TestCalcNetProfit(t *testing.T) {
 							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -137,18 +145,9 @@ func TestCalcNetProfit(t *testing.T) {
 						},
 					},
 				},
-				"trade2": {
-					{
-						Side: types.SideTypeSell,
-						Fills: []types.Fill{
-							{
-								Price:    decimal.RequireFromString("50"),
-								Quantity: decimal.RequireFromString("1"),
-								Fee:      decimal.RequireFromString("0"),
-							},
-						},
-					},
-					{
+				// trade2: realized short
+				{
+					buy: &types.ExecutionReport{ // buy leg
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -158,9 +157,20 @@ func TestCalcNetProfit(t *testing.T) {
 							},
 						},
 					},
+					sell: &types.ExecutionReport{ // sell leg
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
+							{
+								Price:    decimal.RequireFromString("50"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0"),
+							},
+						},
+					},
 				},
-				"trade3": {
-					{
+				// trade3: only buy (unrealized)
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -170,8 +180,13 @@ func TestCalcNetProfit(t *testing.T) {
 							},
 						},
 					},
+					sell: nil,
 				},
 			},
+			// trade1: gross 10, fees 2
+			// trade2: gross -10, fees 0
+			// trade3: gross ignored (unrealized), fees 0.1
+			// total gross = 0, total fees = 2.1 -> net = -2.1
 			want: decimal.RequireFromString("-2.1"),
 		},
 	}
@@ -181,7 +196,7 @@ func TestCalcNetProfit(t *testing.T) {
 			var wg sync.WaitGroup
 			wg.Add(1)
 
-			got := calcNetProfit(tt.executions, &wg)
+			got := calcNetProfit(tt.trades, &wg)
 
 			if !got.Equal(tt.want) {
 				t.Fatalf("calcNetProfit() = %s, want %s", got.String(), tt.want.String())
@@ -192,21 +207,21 @@ func TestCalcNetProfit(t *testing.T) {
 
 func TestNetAvgProfitPerTrade(t *testing.T) {
 	tests := []struct {
-		name       string
-		executions map[string][]types.ExecutionReport
-		want       decimal.Decimal
+		name   string
+		trades []trade
+		want   decimal.Decimal
 	}{
 		{
-			name:       "no executions => 0",
-			executions: map[string][]types.ExecutionReport{},
-			want:       decimal.RequireFromString("0"),
+			name:   "no executions => 0",
+			trades: []trade{},
+			want:   decimal.RequireFromString("0"),
 		},
 		{
 			name: "only buys (no realized trades) => 0",
 			// Note: even though fees are present, realizedTrades==0 so function returns 0
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -216,15 +231,16 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 							},
 						},
 					},
+					sell: nil,
 				},
 			},
 			want: decimal.RequireFromString("0"),
 		},
 		{
 			name: "simple realized long trade (buy then sell, with fees)",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -234,7 +250,7 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -246,13 +262,14 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 					},
 				},
 			},
+			// gross = -100 + 110 = 10, fees = 2 -> net = 8, only one realized trade
 			want: decimal.RequireFromString("8"),
 		},
 		{
 			name: "partially closed position is treated as realized",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -262,7 +279,7 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -274,13 +291,15 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 					},
 				},
 			},
+			// gross = -200 + 110 = -90, fees = 0 -> net = -90
 			want: decimal.RequireFromString("-90"),
 		},
 		{
 			name: "one realized trade + one unrealized trade (fees from unrealized still counted)",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				// realized trade
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -290,7 +309,7 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -301,8 +320,9 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 						},
 					},
 				},
-				"trade2": {
-					{
+				// unrealized trade (only buy)
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -312,20 +332,26 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 							},
 							{
 								Price:    decimal.RequireFromString("50"),
-								Quantity: decimal.RequireFromString("0"), // example extra fill, not necessary
+								Quantity: decimal.RequireFromString("0"), // extra fill, fee counted
 								Fee:      decimal.RequireFromString("0.5"),
 							},
 						},
 					},
+					sell: nil,
 				},
 			},
+			// realized trade gross = 10, fees = 2
+			// unrealized trade fees = 1, gross ignored (no sell)
+			// total gross = 10, total fees = 3, realizedTrades = 1
+			// netAvg = (10 - 3) / 1 = 7
 			want: decimal.RequireFromString("7"),
 		},
 		{
 			name: "two realized trades, no unrealized",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				// trade1: long
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -335,7 +361,7 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -346,18 +372,9 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 						},
 					},
 				},
-				"trade2": {
-					{
-						Side: types.SideTypeSell,
-						Fills: []types.Fill{
-							{
-								Price:    decimal.RequireFromString("200"),
-								Quantity: decimal.RequireFromString("1"),
-								Fee:      decimal.RequireFromString("0.5"),
-							},
-						},
-					},
-					{
+				// trade2: short
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -367,8 +384,22 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 							},
 						},
 					},
+					sell: &types.ExecutionReport{
+						Side: types.SideTypeSell,
+						Fills: []types.Fill{
+							{
+								Price:    decimal.RequireFromString("200"),
+								Quantity: decimal.RequireFromString("1"),
+								Fee:      decimal.RequireFromString("0.5"),
+							},
+						},
+					},
 				},
 			},
+			// trade1: gross 10, fees 2
+			// trade2: gross 50, fees 1
+			// total gross = 60, total fees = 3, realizedTrades = 2
+			// netAvg = (60 - 3) / 2 = 28.5
 			want: decimal.RequireFromString("28.5"),
 		},
 	}
@@ -379,7 +410,7 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 			var wg sync.WaitGroup
 			wg.Add(1)
 
-			got := calcNetAvgProfitPerTrade(tt.executions, &wg)
+			got := calcNetAvgProfitPerTrade(tt.trades, &wg)
 
 			if !got.Equal(tt.want) {
 				t.Fatalf("NetAvgProfitPerTrade() = %s, want %s", got.String(), tt.want.String())
@@ -591,7 +622,7 @@ func TestCalcCAGRFromSnapshots(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt // capture range var
+
 		t.Run(tt.name, func(t *testing.T) {
 			var wg sync.WaitGroup
 			wg.Add(1)
@@ -607,21 +638,21 @@ func TestCalcCAGRFromSnapshots(t *testing.T) {
 func TestCalcAvgWinLossPerTrade(t *testing.T) {
 	tests := []struct {
 		name        string
-		executions  map[string][]types.ExecutionReport
+		trades      []trade
 		wantAvgWin  decimal.Decimal
 		wantAvgLoss decimal.Decimal
 	}{
 		{
 			name:        "no executions -> zero win/loss",
-			executions:  map[string][]types.ExecutionReport{},
+			trades:      []trade{},
 			wantAvgWin:  decimal.RequireFromString("0"),
 			wantAvgLoss: decimal.RequireFromString("0"),
 		},
 		{
 			name: "only unrealized trades (only buys) -> zero win/loss",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -631,6 +662,7 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 							},
 						},
 					},
+					sell: nil,
 				},
 			},
 			wantAvgWin:  decimal.RequireFromString("0"),
@@ -638,9 +670,9 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 		},
 		{
 			name: "single realized winning trade",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -650,7 +682,7 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -662,14 +694,15 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 					},
 				},
 			},
+			// gross = -100 + 120 = 20, fees = 2 -> net = 18
 			wantAvgWin:  decimal.RequireFromString("18"),
 			wantAvgLoss: decimal.RequireFromString("0"),
 		},
 		{
 			name: "single realized losing trade",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -679,7 +712,7 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -691,14 +724,16 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 					},
 				},
 			},
+			// gross = -100 + 90 = -10, fees = 2 -> net = -12
 			wantAvgWin:  decimal.RequireFromString("0"),
 			wantAvgLoss: decimal.RequireFromString("12"),
 		},
 		{
 			name: "one winner and one loser",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				// winner
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -708,7 +743,7 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -719,8 +754,9 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 						},
 					},
 				},
-				"trade2": {
-					{
+				// loser
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -730,7 +766,7 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -742,14 +778,17 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 					},
 				},
 			},
+			// trade1: gross 20, fees 2 -> net 18
+			// trade2: gross -20, fees 4 -> net -24
+			// avgWin = 18, avgLoss = 24
 			wantAvgWin:  decimal.RequireFromString("18"),
 			wantAvgLoss: decimal.RequireFromString("24"),
 		},
 		{
 			name: "realized trade with zero net (ignored for both win/loss)",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -759,7 +798,7 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -771,14 +810,15 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 					},
 				},
 			},
+			// net = 0, so neither win nor loss bucket
 			wantAvgWin:  decimal.RequireFromString("0"),
 			wantAvgLoss: decimal.RequireFromString("0"),
 		},
 		{
 			name: "partially closed position (still treated as realized)",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -788,7 +828,7 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -800,18 +840,19 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 					},
 				},
 			},
+			// gross = -200 + 150 = -50, net = -50 -> single losing trade
 			wantAvgWin:  decimal.RequireFromString("0"),
 			wantAvgLoss: decimal.RequireFromString("50"),
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt // capture range var
+		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			var wg sync.WaitGroup
 			wg.Add(1)
 
-			gotWin, gotLoss := calcAvgWinLossPerTrade(tt.executions, &wg)
+			gotWin, gotLoss := calcAvgWinLossPerTrade(tt.trades, &wg)
 
 			if !gotWin.Equal(tt.wantAvgWin) {
 				t.Fatalf("calcAvgWinLossPerTrade avgWin = %s, want %s", gotWin.String(), tt.wantAvgWin.String())
@@ -929,7 +970,6 @@ func TestCalcMaxDrawdownMetrics(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt // capture range var
 		t.Run(tt.name, func(t *testing.T) {
 			var wg sync.WaitGroup
 			wg.Add(1)
@@ -953,133 +993,149 @@ func TestCalcMaxConsecutiveLosses(t *testing.T) {
 	baseTime := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		name       string
-		executions map[string][]types.ExecutionReport
-		want       int
+		name   string
+		trades []trade
+		want   int
 	}{
 		{
-			name:       "no trades -> 0",
-			executions: map[string][]types.ExecutionReport{},
-			want:       0,
+			name:   "no trades -> 0",
+			trades: []trade{},
+			want:   0,
 		},
 		{
 			name: "second time is higher max consecutive losses",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				// trade1: loss (100 -> 99)
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(1 * time.Hour),
 						Fills: []types.Fill{
 							{
 								Price:    decimal.RequireFromString("100"),
 								Quantity: decimal.RequireFromString("1"),
-								Fee:      decimal.RequireFromString("0")},
+								Fee:      decimal.RequireFromString("0"),
+							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(2 * time.Hour),
 						Fills: []types.Fill{
 							{
 								Price:    decimal.RequireFromString("99"),
 								Quantity: decimal.RequireFromString("1"),
-								Fee:      decimal.RequireFromString("0")},
+								Fee:      decimal.RequireFromString("0"),
+							},
 						},
 					},
 				},
-				"trade2": {
-					{
+				// trade2: win (100 -> 1000)
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(1 * time.Hour),
 						Fills: []types.Fill{
 							{
 								Price:    decimal.RequireFromString("100"),
 								Quantity: decimal.RequireFromString("1"),
-								Fee:      decimal.RequireFromString("0")},
+								Fee:      decimal.RequireFromString("0"),
+							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(3 * time.Hour),
 						Fills: []types.Fill{
 							{
 								Price:    decimal.RequireFromString("1000"),
 								Quantity: decimal.RequireFromString("1"),
-								Fee:      decimal.RequireFromString("0")},
+								Fee:      decimal.RequireFromString("0"),
+							},
 						},
 					},
 				},
-				"trade3": {
-					{
+				// trade3: loss (100 -> 99)
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(1 * time.Hour),
 						Fills: []types.Fill{
 							{
 								Price:    decimal.RequireFromString("100"),
 								Quantity: decimal.RequireFromString("1"),
-								Fee:      decimal.RequireFromString("0")},
+								Fee:      decimal.RequireFromString("0"),
+							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(4 * time.Hour),
 						Fills: []types.Fill{
 							{
 								Price:    decimal.RequireFromString("99"),
 								Quantity: decimal.RequireFromString("1"),
-								Fee:      decimal.RequireFromString("0")},
+								Fee:      decimal.RequireFromString("0"),
+							},
 						},
 					},
 				},
-				"trade4": {
-					{
+				// trade4: loss (100 -> 99)
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(1 * time.Hour),
 						Fills: []types.Fill{
 							{
 								Price:    decimal.RequireFromString("100"),
 								Quantity: decimal.RequireFromString("1"),
-								Fee:      decimal.RequireFromString("0")},
+								Fee:      decimal.RequireFromString("0"),
+							},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(5 * time.Hour),
 						Fills: []types.Fill{
 							{
 								Price:    decimal.RequireFromString("99"),
 								Quantity: decimal.RequireFromString("1"),
-								Fee:      decimal.RequireFromString("0")},
+								Fee:      decimal.RequireFromString("0"),
+							},
 						},
 					},
 				},
 			},
-			want: 2,
+			want: 2, // longest streak of consecutive losses by close time
 		},
 		{
 			name: "only unrealized trades (no buy+sell pair) -> 0",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(1 * time.Hour),
 						Fills: []types.Fill{
 							{
 								Price:    decimal.RequireFromString("100"),
 								Quantity: decimal.RequireFromString("1"),
-								Fee:      decimal.RequireFromString("0")},
+								Fee:      decimal.RequireFromString("0"),
+							},
 						},
 					},
+					sell: nil,
 				},
-				"trade2": {
-					{
+				{
+					buy: nil,
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(2 * time.Hour),
 						Fills: []types.Fill{
 							{
 								Price:    decimal.RequireFromString("100"),
 								Quantity: decimal.RequireFromString("1"),
-								Fee:      decimal.RequireFromString("0")},
+								Fee:      decimal.RequireFromString("0"),
+							},
 						},
 					},
 				},
@@ -1088,32 +1144,32 @@ func TestCalcMaxConsecutiveLosses(t *testing.T) {
 		},
 		{
 			name: "three consecutive losing trades",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(1 * time.Hour),
 						Fills: []types.Fill{
 							{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
-						ReportTime: baseTime.Add(2 * time.Hour), // closeTime
+						ReportTime: baseTime.Add(2 * time.Hour),
 						Fills: []types.Fill{
 							{Price: decimal.RequireFromString("90"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
 						},
 					},
 				},
-				"trade2": {
-					{
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(3 * time.Hour),
 						Fills: []types.Fill{
 							{Price: decimal.RequireFromString("200"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(4 * time.Hour),
 						Fills: []types.Fill{
@@ -1121,15 +1177,15 @@ func TestCalcMaxConsecutiveLosses(t *testing.T) {
 						},
 					},
 				},
-				"trade3": {
-					{
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(5 * time.Hour),
 						Fills: []types.Fill{
 							{Price: decimal.RequireFromString("300"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")},
 						},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(6 * time.Hour),
 						Fills: []types.Fill{
@@ -1142,74 +1198,80 @@ func TestCalcMaxConsecutiveLosses(t *testing.T) {
 		},
 		{
 			name: "loss streak broken by win and breakeven",
-			executions: map[string][]types.ExecutionReport{
-				"trade1": {
-					{
+			trades: []trade{
+				// trade1: win
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(1 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(2 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("120"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
-				"trade2": {
-					{
+				// trade2: loss
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(3 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(4 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("90"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
-				"trade3": {
-					{
+				// trade3: loss
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(5 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(6 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("80"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
-				"trade4": {
-					{
+				// trade4: breakeven
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(7 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(8 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
-				"trade5": {
-					{
+				// trade5: loss
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(9 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(10 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("90"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
-				"trade6": {
-					{
+				// trade6: loss
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(11 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(12 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("80"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
@@ -1219,56 +1281,59 @@ func TestCalcMaxConsecutiveLosses(t *testing.T) {
 			want: 2,
 		},
 		{
-			name: "order determined by sell time, not map key",
-			executions: map[string][]types.ExecutionReport{
-				"tradeA": { // closes second
-					{
+			name: "order determined by sell time, not slice order",
+			trades: []trade{
+				// tradeA: closes second (loss)
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(2 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(4 * time.Hour),
-						Fills:      []types.Fill{{Price: decimal.RequireFromString("90"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}}, // loss
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("90"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
-				"tradeB": { // closes first
-					{
+				// tradeB: closes first (loss, deeper)
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(1 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(3 * time.Hour),
-						Fills:      []types.Fill{{Price: decimal.RequireFromString("80"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}}, // deeper loss
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("80"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
-				"tradeC": { // closes last
-					{
+				// tradeC: closes last (win)
+				{
+					buy: &types.ExecutionReport{
 						Side:       types.SideTypeBuy,
 						ReportTime: baseTime.Add(5 * time.Hour),
 						Fills:      []types.Fill{{Price: decimal.RequireFromString("100"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
-					{
+					sell: &types.ExecutionReport{
 						Side:       types.SideTypeSell,
 						ReportTime: baseTime.Add(6 * time.Hour),
-						Fills:      []types.Fill{{Price: decimal.RequireFromString("120"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}}, // win
+						Fills:      []types.Fill{{Price: decimal.RequireFromString("120"), Quantity: decimal.RequireFromString("1"), Fee: decimal.RequireFromString("0")}},
 					},
 				},
 			},
-			want: 2,
+			want: 2, // two losses in a row by close time, then a win
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt // capture range var
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			var wg sync.WaitGroup
 			wg.Add(1)
 
-			got := calcMaxConsecutiveLosses(tt.executions, &wg)
+			got := calcMaxConsecutiveLosses(tt.trades, &wg)
 
 			if got != tt.want {
 				t.Fatalf("calcMaxConsecutiveLosses() = %d, want %d", got, tt.want)
@@ -1472,6 +1537,265 @@ func TestCalcSharpeRatioFromSnapshots(t *testing.T) {
 			got := calcSharpeRatio(tt.snapshots, tt.riskFree, &wg)
 			if !got.Round(4).Equal(tt.wantSharpe.Round(4)) {
 				t.Fatalf("got=%s, want=%s", got.Round(4), tt.wantSharpe.Round(4))
+			}
+		})
+	}
+}
+
+func TestExecutionsToTrades(t *testing.T) {
+	baseTime := time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name       string
+		executions []types.ExecutionReport
+		wantTrades []trade
+	}{
+		{
+			name: "single long trade (buy then sell)",
+			executions: []types.ExecutionReport{
+				{
+					Ticker:         "AAPL",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime,
+					TotalFilledQty: decimal.NewFromInt(10),
+				},
+				{
+					Ticker:         "AAPL",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime.Add(time.Minute),
+					TotalFilledQty: decimal.NewFromInt(10),
+				},
+			},
+			wantTrades: []trade{
+				{
+					buy: &types.ExecutionReport{
+						Ticker:         "AAPL",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime,
+						TotalFilledQty: decimal.NewFromInt(10),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "AAPL",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime.Add(time.Minute),
+						TotalFilledQty: decimal.NewFromInt(10),
+					},
+				},
+			},
+		},
+		{
+			name: "single short trade (sell then buy)",
+			executions: []types.ExecutionReport{
+				{
+					Ticker:         "MSFT",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime,
+					TotalFilledQty: decimal.NewFromInt(5),
+				},
+				{
+					Ticker:         "MSFT",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime.Add(time.Minute),
+					TotalFilledQty: decimal.NewFromInt(5),
+				},
+			},
+			wantTrades: []trade{
+				{
+					// normalized so buy is the buy leg, sell is the sell leg,
+					// regardless of chronological order
+					buy: &types.ExecutionReport{
+						Ticker:         "MSFT",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime.Add(time.Minute),
+						TotalFilledQty: decimal.NewFromInt(5),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "MSFT",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime,
+						TotalFilledQty: decimal.NewFromInt(5),
+					},
+				},
+			},
+		},
+		{
+			name: "mixed long and short across tickers",
+			executions: []types.ExecutionReport{
+				// AAPL long
+				{
+					Ticker:         "AAPL",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime,
+					TotalFilledQty: decimal.NewFromInt(10),
+				},
+				{
+					Ticker:         "AAPL",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime.Add(time.Minute),
+					TotalFilledQty: decimal.NewFromInt(10),
+				},
+				// MSFT short
+				{
+					Ticker:         "MSFT",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime.Add(30 * time.Second),
+					TotalFilledQty: decimal.NewFromInt(3),
+				},
+				{
+					Ticker:         "MSFT",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime.Add(2 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(3),
+				},
+			},
+			// this assumes executionsToTrades returns trades in the order the
+			// pairs are completed: first AAPL, then MSFT
+			wantTrades: []trade{
+				{
+					buy: &types.ExecutionReport{
+						Ticker:         "AAPL",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime,
+						TotalFilledQty: decimal.NewFromInt(10),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "AAPL",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime.Add(time.Minute),
+						TotalFilledQty: decimal.NewFromInt(10),
+					},
+				},
+				{
+					buy: &types.ExecutionReport{
+						Ticker:         "MSFT",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime.Add(2 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(3),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "MSFT",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime.Add(30 * time.Second),
+						TotalFilledQty: decimal.NewFromInt(3),
+					},
+				},
+			},
+		},
+		{
+			name: "unmatched final buy results in trade with only buy side",
+			executions: []types.ExecutionReport{
+				{
+					Ticker:         "AAPL",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime,
+					TotalFilledQty: decimal.NewFromInt(10),
+				},
+				{
+					Ticker:         "AAPL",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime.Add(time.Minute),
+					TotalFilledQty: decimal.NewFromInt(10),
+				},
+				// unmatched buy (open long)
+				{
+					Ticker:         "AAPL",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime.Add(2 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(5),
+				},
+			},
+			wantTrades: []trade{
+				{
+					buy: &types.ExecutionReport{
+						Ticker:         "AAPL",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime,
+						TotalFilledQty: decimal.NewFromInt(10),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "AAPL",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime.Add(time.Minute),
+						TotalFilledQty: decimal.NewFromInt(10),
+					},
+				},
+				{
+					buy: &types.ExecutionReport{
+						Ticker:         "AAPL",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime.Add(2 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(5),
+					},
+					sell: nil,
+				},
+			},
+		},
+		{
+			name: "unmatched final sell results in trade with only sell side",
+			executions: []types.ExecutionReport{
+				{
+					Ticker:         "MSFT",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime,
+					TotalFilledQty: decimal.NewFromInt(4),
+				},
+				{
+					Ticker:         "MSFT",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime.Add(time.Minute),
+					TotalFilledQty: decimal.NewFromInt(4),
+				},
+				// unmatched sell (open short)
+				{
+					Ticker:         "MSFT",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime.Add(2 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(2),
+				},
+			},
+			wantTrades: []trade{
+				{
+					buy: &types.ExecutionReport{
+						Ticker:         "MSFT",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime.Add(time.Minute),
+						TotalFilledQty: decimal.NewFromInt(4),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "MSFT",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime,
+						TotalFilledQty: decimal.NewFromInt(4),
+					},
+				},
+				{
+					buy: nil,
+					sell: &types.ExecutionReport{
+						Ticker:         "MSFT",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime.Add(2 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(2),
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &portfolio{
+				executions: tc.executions,
+			}
+
+			got := executionsToTrades(p)
+
+			if len(got) != len(tc.wantTrades) {
+				t.Fatalf("executionsToTrades() returned %d trades, want %d", len(got), len(tc.wantTrades))
+			}
+			for i := range tc.wantTrades {
+				if !reflect.DeepEqual(got[i], tc.wantTrades[i]) {
+					t.Fatalf("executionsToTrades() returned trade %v, want %v", got[i], tc.wantTrades[i])
+				}
 			}
 		})
 	}

@@ -7,8 +7,7 @@ import (
 )
 
 type ExecutionReport struct {
-	TradeId        string
-	Symbol         string
+	Ticker         string
 	Side           Side
 	Status         OrderStatus
 	Fills          []Fill
@@ -37,7 +36,6 @@ func NewFill(time time.Time, price, qty, fee decimal.Decimal) Fill {
 }
 
 func NewExecutionReport(
-	tradeID string,
 	symbol string,
 	side Side,
 	status OrderStatus,
@@ -50,8 +48,7 @@ func NewExecutionReport(
 	reportTime time.Time,
 ) ExecutionReport {
 	return ExecutionReport{
-		TradeId:        tradeID,
-		Symbol:         symbol,
+		Ticker:         symbol,
 		Side:           side,
 		Status:         status,
 		Fills:          fills,

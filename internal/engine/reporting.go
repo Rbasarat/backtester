@@ -43,6 +43,11 @@ type Report struct {
 	// TODO: UPI (brent pentfold book)
 }
 
+type trade struct {
+	buy  *types.ExecutionReport
+	sell *types.ExecutionReport
+}
+
 func (e *Engine) printReport(report *Report) {
 
 	fmt.Println("===== Trading Report =====")
@@ -77,23 +82,23 @@ func (e *Engine) printReport(report *Report) {
 }
 
 func (e *Engine) generateReport(start, end time.Time, results *portfolio) *Report {
-	groupedFills := groupExecutionsByTradeId(results)
-
+	trades := executionsToTrades(results)
+	//
 	report := &Report{}
 	report.StartDate = start
 	report.TotalPeriod = end.Sub(start).Truncate(time.Hour * 24)
-	report.TotalTrades = len(groupedFills)
+	report.TotalTrades = len(trades)
 
 	var wg sync.WaitGroup
 	wg.Add(7)
 	go func() {
-		report.NetProfit = calcNetProfit(groupedFills, &wg)
+		report.NetProfit = calcNetProfit(trades, &wg)
 	}()
 	go func() {
-		report.NetAvgProfitPerTrade = calcNetAvgProfitPerTrade(groupedFills, &wg)
+		report.NetAvgProfitPerTrade = calcNetAvgProfitPerTrade(trades, &wg)
 	}()
 	go func() {
-		report.AvgWin, report.AvgLoss = calcAvgWinLossPerTrade(groupedFills, &wg)
+		report.AvgWin, report.AvgLoss = calcAvgWinLossPerTrade(trades, &wg)
 	}()
 	go func() {
 		report.CAGR = calcCAGR(results.snapshots, &wg)
@@ -102,7 +107,7 @@ func (e *Engine) generateReport(start, end time.Time, results *portfolio) *Repor
 		report.MaxDrawdown, report.MaxDrawdownPercent, report.MaxDrawdownDays = calcDrawdownMetrics(results.snapshots, &wg)
 	}()
 	go func() {
-		report.MaxConsecutiveLosses = calcMaxConsecutiveLosses(groupedFills, &wg)
+		report.MaxConsecutiveLosses = calcMaxConsecutiveLosses(trades, &wg)
 	}()
 	go func() {
 		report.SharpeRatio = calcSharpeRatio(results.snapshots, e.reportingConfig.sharpeRiskFreeRate, &wg)
@@ -112,18 +117,26 @@ func (e *Engine) generateReport(start, end time.Time, results *portfolio) *Repor
 	return report
 }
 
-func calcNetProfit(executions map[string][]types.ExecutionReport, wg *sync.WaitGroup) decimal.Decimal {
+func calcNetProfit(trades []trade, wg *sync.WaitGroup) decimal.Decimal {
 	defer wg.Done()
+
 	grossProfit := decimal.Zero
 	totalFees := decimal.Zero
-	for _, trades := range executions {
+
+	for _, tr := range trades {
 		hasBuy, hasSell := false, false
-		curGrossProfit, curFees := decimal.Zero, decimal.Zero
-		for _, report := range trades {
+		curGrossProfit := decimal.Zero
+		curFees := decimal.Zero
+
+		processReport := func(report *types.ExecutionReport) {
+			if report == nil {
+				return
+			}
+
 			for _, fill := range report.Fills {
 				curFees = curFees.Add(fill.Fee)
 				value := fill.Quantity.Mul(fill.Price)
-				// Switch on the sideType owned by the report
+
 				switch report.Side {
 				case types.SideTypeBuy:
 					curGrossProfit = curGrossProfit.Sub(value)
@@ -134,28 +147,44 @@ func calcNetProfit(executions map[string][]types.ExecutionReport, wg *sync.WaitG
 				}
 			}
 		}
+
+		// process both legs (some trades may be partial: one of these is nil)
+		processReport(tr.buy)
+		processReport(tr.sell)
+
+		// Only realize PnL when the trade has both sides
 		if hasBuy && hasSell {
 			grossProfit = grossProfit.Add(curGrossProfit)
 		}
-		// Always take fees into account even if the trade is not closed
+
+		// Always subtract fees, even for open trades
 		totalFees = totalFees.Add(curFees)
 	}
+
 	return grossProfit.Sub(totalFees)
 }
 
-func calcNetAvgProfitPerTrade(executions map[string][]types.ExecutionReport, wg *sync.WaitGroup) decimal.Decimal {
+func calcNetAvgProfitPerTrade(trades []trade, wg *sync.WaitGroup) decimal.Decimal {
 	defer wg.Done()
+
 	grossProfit := decimal.Zero
 	totalFees := decimal.Zero
 	realizedTrades := 0
-	for _, trades := range executions {
+
+	for _, tr := range trades {
 		hasBuy, hasSell := false, false
-		curGrossProfit, curFees := decimal.Zero, decimal.Zero
-		for _, report := range trades {
+		curGrossProfit := decimal.Zero
+		curFees := decimal.Zero
+
+		processReport := func(report *types.ExecutionReport) {
+			if report == nil {
+				return
+			}
+
 			for _, fill := range report.Fills {
 				curFees = curFees.Add(fill.Fee)
 				value := fill.Quantity.Mul(fill.Price)
-				// Switch on the sideType owned by the report
+
 				switch report.Side {
 				case types.SideTypeBuy:
 					curGrossProfit = curGrossProfit.Sub(value)
@@ -166,17 +195,26 @@ func calcNetAvgProfitPerTrade(executions map[string][]types.ExecutionReport, wg 
 				}
 			}
 		}
+
+		// process both legs (some trades may be partial: one of these is nil)
+		processReport(tr.buy)
+		processReport(tr.sell)
+
 		if hasBuy && hasSell {
 			grossProfit = grossProfit.Add(curGrossProfit)
 			realizedTrades++
 		}
+
 		// Always take fees into account even if the trade is not closed
 		totalFees = totalFees.Add(curFees)
 	}
+
 	if realizedTrades == 0 {
 		return decimal.Zero
 	}
-	return grossProfit.Sub(totalFees).Div(decimal.NewFromInt(int64(realizedTrades)))
+
+	netProfit := grossProfit.Sub(totalFees)
+	return netProfit.Div(decimal.NewFromInt(int64(realizedTrades)))
 }
 
 func calcCAGR(snapshots []types.PortfolioView, wg *sync.WaitGroup) decimal.Decimal {
@@ -218,20 +256,24 @@ func calcCAGR(snapshots []types.PortfolioView, wg *sync.WaitGroup) decimal.Decim
 	return decimal.NewFromFloat(cagrFloat)
 }
 
-func calcAvgWinLossPerTrade(executions map[string][]types.ExecutionReport, wg *sync.WaitGroup) (decimal.Decimal, decimal.Decimal) {
+func calcAvgWinLossPerTrade(trades []trade, wg *sync.WaitGroup) (decimal.Decimal, decimal.Decimal) {
 	defer wg.Done()
 
 	sumWins := decimal.Zero
-	sumLosses := decimal.Zero // we'll store absolute loss amounts here
+	sumLosses := decimal.Zero // store absolute loss amounts
 	winCount := 0
 	lossCount := 0
 
-	for _, trades := range executions {
+	for _, tr := range trades {
 		hasBuy, hasSell := false, false
 		curGrossProfit := decimal.Zero
 		curFees := decimal.Zero
 
-		for _, report := range trades {
+		processReport := func(report *types.ExecutionReport) {
+			if report == nil {
+				return
+			}
+
 			for _, fill := range report.Fills {
 				curFees = curFees.Add(fill.Fee)
 
@@ -246,6 +288,9 @@ func calcAvgWinLossPerTrade(executions map[string][]types.ExecutionReport, wg *s
 				}
 			}
 		}
+
+		processReport(tr.buy)
+		processReport(tr.sell)
 
 		// Only realized trades (have both a buy and a sell)
 		if hasBuy && hasSell {
@@ -318,7 +363,7 @@ func calcDrawdownMetrics(
 	return maxDD, maxDDPct, maxDDDuration
 }
 
-func calcMaxConsecutiveLosses(executions map[string][]types.ExecutionReport, wg *sync.WaitGroup) int {
+func calcMaxConsecutiveLosses(trades []trade, wg *sync.WaitGroup) int {
 	defer wg.Done()
 
 	type tradeResult struct {
@@ -328,13 +373,22 @@ func calcMaxConsecutiveLosses(executions map[string][]types.ExecutionReport, wg 
 
 	var tradeResults []tradeResult
 
-	for _, reports := range executions {
+	for _, tr := range trades {
 		hasBuy, hasSell := false, false
 		curGrossProfit := decimal.Zero
 		curFees := decimal.Zero
 		var closeTime time.Time
 
-		for _, report := range reports {
+		processReport := func(report *types.ExecutionReport) {
+			if report == nil {
+				return
+			}
+
+			// use the latest leg time as "close" time
+			if report.ReportTime.After(closeTime) {
+				closeTime = report.ReportTime
+			}
+
 			for _, fill := range report.Fills {
 				curFees = curFees.Add(fill.Fee)
 
@@ -346,13 +400,14 @@ func calcMaxConsecutiveLosses(executions map[string][]types.ExecutionReport, wg 
 				case types.SideTypeSell:
 					curGrossProfit = curGrossProfit.Add(value)
 					hasSell = true
-
-					if report.ReportTime.After(closeTime) {
-						closeTime = report.ReportTime
-					}
 				}
 			}
 		}
+
+		processReport(tr.buy)
+		processReport(tr.sell)
+
+		// Only realized trades (have both a buy and a sell)
 		if hasBuy && hasSell && !closeTime.IsZero() {
 			netPnL := curGrossProfit.Sub(curFees)
 			tradeResults = append(tradeResults, tradeResult{
@@ -362,6 +417,7 @@ func calcMaxConsecutiveLosses(executions map[string][]types.ExecutionReport, wg 
 		}
 	}
 
+	// Sort realized trades by close time
 	sort.Slice(tradeResults, func(i, j int) bool {
 		return tradeResults[i].closeTime.Before(tradeResults[j].closeTime)
 	})
@@ -523,12 +579,81 @@ func getMonthlyReturns(snapshots []types.PortfolioView) []decimal.Decimal {
 }
 
 // Helper functions
-func groupExecutionsByTradeId(results *portfolio) map[string][]types.ExecutionReport {
-	var groupedFillsMap = make(map[string][]types.ExecutionReport)
-	for _, exec := range results.executions {
-		groupedFillsMap[exec.TradeId] = append(groupedFillsMap[exec.TradeId], exec)
+func executionsToTrades(p *portfolio) []trade {
+	// Group executions by ticker so we don't accidentally pair
+	// different symbols together.
+	execsByTicker := make(map[string][]types.ExecutionReport)
+	for _, exec := range p.executions {
+		execsByTicker[exec.Ticker] = append(execsByTicker[exec.Ticker], exec)
 	}
-	return groupedFillsMap
+
+	var trades []trade
+
+	for _, execs := range execsByTicker {
+		// Sort executions for this ticker by time
+		sort.Slice(execs, func(i, j int) bool {
+			return execs[i].ReportTime.Before(execs[j].ReportTime)
+		})
+
+		// Pair them off 2-by-2: [0,1], [2,3], ...
+		for i := 0; i < len(execs); i += 2 {
+			// Normal pair
+			if i+1 < len(execs) {
+				a := &execs[i]
+				b := &execs[i+1]
+
+				var newTrade trade
+				if a.Side == types.SideTypeBuy {
+					newTrade.buy = a
+					newTrade.sell = b
+				} else {
+					newTrade.buy = b
+					newTrade.sell = a
+				}
+				trades = append(trades, newTrade)
+
+				continue
+			}
+
+			// Leftover single execution → partial trade
+			last := &execs[i]
+			var partial trade
+			if last.Side == types.SideTypeBuy {
+				partial.buy = last
+				partial.sell = nil
+			} else {
+				partial.buy = nil
+				partial.sell = last
+			}
+			trades = append(trades, partial)
+		}
+	}
+
+	// Sort resulting trades by the earliest non-nil leg time
+	sort.Slice(trades, func(i, j int) bool {
+		return tradeTime(trades[i]).Before(tradeTime(trades[j]))
+	})
+
+	return trades
+}
+
+// tradeTime returns the earliest non-nil leg time for a trade.
+// Used for sorting trades chronologically.
+func tradeTime(t trade) time.Time {
+	if t.buy != nil && t.sell != nil {
+		if t.buy.ReportTime.Before(t.sell.ReportTime) {
+			return t.buy.ReportTime
+		}
+		return t.sell.ReportTime
+	}
+	if t.buy != nil {
+		return t.buy.ReportTime
+	}
+	if t.sell != nil {
+		return t.sell.ReportTime
+	}
+	// Should not happen, but give a zero time as a fallback.
+	return time.Time{}
 }
 
 func portfolioValue(view types.PortfolioView) decimal.Decimal {
