@@ -6,11 +6,16 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 )
 
 // writeTradesCSVFile writes trades to a CSV file at the given path.
 func (e *Engine) writeTradesCSVFile(path string, trades []trade) error {
+	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
 	f, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("create trades file: %w", err)
