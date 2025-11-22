@@ -61,7 +61,7 @@ func (e *Engine) printReport(report *Report) {
 	fmt.Println("\n-- Absolute Performance --")
 	fmt.Printf("Net Profit:            %s\n", report.NetProfit)
 	fmt.Printf("Avg Profit/Trade:      %s\n", report.NetAvgProfitPerTrade)
-	fmt.Printf("CAGR:                  %s\n", report.CAGR)
+	fmt.Printf("CAGR:                  %s\n", report.CAGR.Mul(decimal.NewFromFloat(100)))
 
 	fmt.Println("\n-- Trade-Level Metrics --")
 	fmt.Printf("Avg Win:               %s\n", report.AvgWin)
@@ -71,7 +71,7 @@ func (e *Engine) printReport(report *Report) {
 	fmt.Printf("Max Drawdown:          %s\n", report.MaxDrawdown)
 	fmt.Printf("Max Drawdown %%:        %s\n", report.MaxDrawdownPercent.Mul(decimal.NewFromFloat(100)))
 	fmt.Printf("Max Drawdown Days:     %v\n", report.MaxDrawdownDays/(24*time.Hour))
-	fmt.Printf("Max Consecutive Losses:%d\n", report.MaxConsecutiveLosses)
+	fmt.Printf("Max Consecutive Losses: %d\n", report.MaxConsecutiveLosses)
 
 	fmt.Println("\n-- Risk-Adjusted Metrics --")
 	fmt.Printf("Sharpe Ratio:          %s\n", report.SharpeRatio)

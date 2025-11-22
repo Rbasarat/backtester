@@ -15,6 +15,7 @@ type ExecutionReport struct {
 	AvgFillPrice   decimal.Decimal
 	TotalFees      decimal.Decimal
 	RemainingQty   decimal.Decimal
+	SignalReason   string
 	RejectReason   string
 	ReportTime     time.Time
 }
@@ -35,28 +36,7 @@ func NewFill(time time.Time, price, qty, fee decimal.Decimal) Fill {
 	}
 }
 
-func NewExecutionReport(
-	symbol string,
-	side Side,
-	status OrderStatus,
-	fills []Fill,
-	totalFilledQty decimal.Decimal,
-	avgFillPrice decimal.Decimal,
-	totalFees decimal.Decimal,
-	remainingQty decimal.Decimal,
-	rejectReason string,
-	reportTime time.Time,
-) ExecutionReport {
-	return ExecutionReport{
-		Ticker:         symbol,
-		Side:           side,
-		Status:         status,
-		Fills:          fills,
-		TotalFilledQty: totalFilledQty,
-		AvgFillPrice:   avgFillPrice,
-		TotalFees:      totalFees,
-		RemainingQty:   remainingQty,
-		RejectReason:   rejectReason,
-		ReportTime:     reportTime,
-	}
+func NewExecutionReport(ticker string, side Side, status OrderStatus, fills []Fill, totalFilledQty decimal.Decimal, avgFillPrice decimal.Decimal, totalFees decimal.Decimal, remainingQty decimal.Decimal, signalReason string, rejectReason string, reportTime time.Time) *ExecutionReport {
+	return &ExecutionReport{Ticker: ticker, Side: side, Status: status, Fills: fills, TotalFilledQty: totalFilledQty, AvgFillPrice: avgFillPrice, TotalFees: totalFees, RemainingQty: remainingQty, SignalReason: signalReason, RejectReason: rejectReason, ReportTime: reportTime}
+
 }
