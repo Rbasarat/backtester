@@ -47,18 +47,14 @@ func TestBacktest_BacktesterBrokerExecutionContext(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error running backtester: %v", err)
 	}
-	if len(testBroker.ctx) != 6 {
-		t.Errorf("Expected at least 6 executionContext, got %d", len(testBroker.ctx))
+	expectedLens := []int{0, 1, 2, 2, 2, 2}
+	if len(testBroker.ctx) != len(expectedLens) {
+		t.Fatalf("Expected %d execution contexts, got %d", len(expectedLens), len(testBroker.ctx))
 	}
 	for i, executionCtx := range testBroker.ctx {
-		if i == 0 || i == 6 {
-			if len(executionCtx.Candles) != 1 {
-				t.Fatalf("Expected executionCtx candles on edges of list len 1, got %d", len(executionCtx.Candles))
-			}
-		} else {
-			if len(executionCtx.Candles["AAPL"]) != 2 {
-				t.Fatalf("Expected executionCtx candles len 2, got %d", len(executionCtx.Candles))
-			}
+		got := len(executionCtx.Candles["AAPL"])
+		if got != expectedLens[i] {
+			t.Fatalf("Expected executionCtx %d to have %d candles, got %d", i, expectedLens[i], got)
 		}
 	}
 }
@@ -302,89 +298,61 @@ func TestBacktest_advanceFeedIndex(t *testing.T) {
 			name: "empty feed",
 			args: args{
 				candles:  nil,
-				curIndex: 0,
+				curIndex: -1,
 				curTime:  base,
 			},
-			want: 0,
+			want: -1,
 		},
 		{
-			name: "before first candle",
+			name: "before first candle close",
 			args: args{
 				candles:  mkCandles(3),
-				curIndex: 0,
-				curTime:  base.Add(-time.Second),
-			},
-			want: 0,
-		},
-		{
-			name: "exactly at first candle",
-			args: args{
-				candles:  mkCandles(3),
-				curIndex: 0,
-				curTime:  base,
-			},
-			want: 0,
-		},
-		{
-			name: "between first and second candle",
-			args: args{
-				candles:  mkCandles(3),
-				curIndex: 0,
+				curIndex: -1,
 				curTime:  base.Add(30 * time.Second),
 			},
+			want: -1,
+		},
+		{
+			name: "exactly at first candle close",
+			args: args{
+				candles:  mkCandles(3),
+				curIndex: -1,
+				curTime:  base.Add(1 * time.Minute),
+			},
 			want: 0,
 		},
 		{
-			name: "exactly at second candle",
+			name: "after last candle close",
 			args: args{
 				candles:  mkCandles(3),
-				curIndex: 0,
-				curTime:  base.Add(1 * time.Minute),
-			},
-			want: 1,
-		},
-		{
-			name: "after last candle",
-			args: args{
-				candles:  mkCandles(3),
-				curIndex: 0,
+				curIndex: -1,
 				curTime:  base.Add(10 * time.Minute),
 			},
 			want: 2,
 		},
 		{
-			name: "starts from a non-zero curIndex, still returns latest <= curTime",
+			name: "starts from a non-zero curIndex, still returns latest closed <= curTime",
 			args: args{
 				candles:  mkCandles(5),
-				curIndex: 2,
-				curTime:  base.Add(3 * time.Minute),
+				curIndex: 1,
+				curTime:  base.Add(4 * time.Minute),
 			},
 			want: 3,
 		},
 		{
-			name: "curTime equal to current curIndex timestamp",
-			args: args{
-				candles:  mkCandles(5),
-				curIndex: 2,
-				curTime:  base.Add(2 * time.Minute),
-			},
-			want: 2,
-		},
-		{
-			name: "curTime before curIndex timestamp (should not go backwards; returns curIndex-1 if that timestamp <= curTime)",
+			name: "does not go backwards when curTime is before next close",
 			args: args{
 				candles:  mkCandles(5),
 				curIndex: 3,
-				curTime:  base.Add(90 * time.Second),
+				curTime:  base.Add(3*time.Minute + 30*time.Second),
 			},
-			want: 2,
+			want: 3,
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			got := advanceFeedIndex(tt.args.candles, tt.args.curIndex, tt.args.curTime)
+			got := advanceFeedIndex(tt.args.candles, tt.args.curIndex, tt.args.curTime, testInterval)
 			if got != tt.want {
 				t.Fatalf("advanceFeedIndex() = %d, want %d", got, tt.want)
 			}

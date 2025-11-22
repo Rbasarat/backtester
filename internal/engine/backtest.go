@@ -25,6 +25,12 @@ type backtester struct {
 
 func newBacktester(feeds []*DataFeedConfig, executionConfig *ExecutionConfig, portfolioConfig *PortfolioConfig, strat strategy, sizing allocator, broker broker, portfolio *portfolio) *backtester {
 	start, end := getGlobalTimeRange(feeds)
+	feedIndex := make(map[string]int)
+	executionIndex := make(map[string]int)
+	for _, feed := range feeds {
+		feedIndex[feed.ticker] = 0
+		executionIndex[feed.ticker] = -1
+	}
 
 	return &backtester{
 		start:           start,
@@ -37,8 +43,8 @@ func newBacktester(feeds []*DataFeedConfig, executionConfig *ExecutionConfig, po
 		allocator:       sizing,
 		broker:          broker,
 		portfolio:       portfolio,
-		feedIndex:       make(map[string]int),
-		executionIndex:  make(map[string]int),
+		feedIndex:       feedIndex,
+		executionIndex:  executionIndex,
 	}
 }
 
@@ -51,11 +57,18 @@ func (b *backtester) run() error {
 				continue
 			}
 			curCandle := feed.candles[i]
-			if curCandle.Timestamp.Equal(b.curTime) {
+			// Only send candles when they are fully closed.
+			candleCloseTime := curCandle.Timestamp.Add(types.IntervalToTime[feed.interval])
+			if candleCloseTime.Equal(b.curTime) {
 				signals = append(signals, b.strategy.OnCandle(curCandle)...)
 				b.feedIndex[feed.ticker]++
 			}
-			b.executionIndex[feed.ticker] = advanceFeedIndex(b.executionConfig.candles[feed.ticker], b.executionIndex[feed.ticker], b.curTime)
+			b.executionIndex[feed.ticker] = advanceFeedIndex(
+				b.executionConfig.candles[feed.ticker],
+				b.executionIndex[feed.ticker],
+				b.curTime,
+				b.executionConfig.interval,
+			)
 		}
 
 		orders := b.allocator.Allocate(signals, b.portfolio.GetPortfolioSnapshot())
@@ -141,13 +154,27 @@ func (b *backtester) getLastPriceForTicker(ticker string) decimal.Decimal {
 }
 
 // Index only goes one way
-func advanceFeedIndex(candles []types.Candle, curIndex int, curTime time.Time) int {
-	for curIndex < len(candles) && !candles[curIndex].Timestamp.After(curTime) {
-		curIndex++
+func advanceFeedIndex(candles []types.Candle, prevIndex int, curTime time.Time, candleInterval types.Interval) int {
+	if prevIndex < -1 {
+		prevIndex = -1
 	}
-	// curIndex is now at the first candle *after* curTime, so latest usable is curIndex-1.
-	if curIndex == 0 {
-		return 0
+
+	nextIdx := prevIndex + 1
+	if nextIdx < 0 {
+		nextIdx = 0
 	}
-	return curIndex - 1
+
+	candleDuration := types.IntervalToTime[candleInterval]
+
+	for nextIdx < len(candles) {
+		closeTime := candles[nextIdx].Timestamp.Add(candleDuration)
+		if closeTime.After(curTime) {
+			break
+		}
+
+		prevIndex = nextIdx
+		nextIdx++
+	}
+
+	return prevIndex
 }
