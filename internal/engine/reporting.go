@@ -40,6 +40,8 @@ type Report struct {
 	// Costs
 	TotalFees decimal.Decimal
 
+	trades []trade
+
 	// TODO: UPI (brent pentfold book)
 }
 
@@ -48,6 +50,7 @@ type trade struct {
 	sell *types.ExecutionReport
 }
 
+// Report metrics
 func (e *Engine) printReport(report *Report) {
 
 	fmt.Println("===== Trading Report =====")
@@ -66,8 +69,8 @@ func (e *Engine) printReport(report *Report) {
 
 	fmt.Println("\n-- Drawdown Metrics --")
 	fmt.Printf("Max Drawdown:          %s\n", report.MaxDrawdown)
-	fmt.Printf("Max Drawdown %%:        %s\n", report.MaxDrawdownPercent)
-	fmt.Printf("Max Drawdown Days:     %v\n", report.MaxDrawdownDays)
+	fmt.Printf("Max Drawdown %%:        %s\n", report.MaxDrawdownPercent.Mul(decimal.NewFromFloat(100)))
+	fmt.Printf("Max Drawdown Days:     %v\n", report.MaxDrawdownDays/(24*time.Hour))
 	fmt.Printf("Max Consecutive Losses:%d\n", report.MaxConsecutiveLosses)
 
 	fmt.Println("\n-- Risk-Adjusted Metrics --")
@@ -81,6 +84,7 @@ func (e *Engine) printReport(report *Report) {
 	fmt.Println("==========================")
 }
 
+// Generate metrics
 func (e *Engine) generateReport(start, end time.Time, results *portfolio) *Report {
 	trades := executionsToTrades(results)
 	//
@@ -88,6 +92,7 @@ func (e *Engine) generateReport(start, end time.Time, results *portfolio) *Repor
 	report.StartDate = start
 	report.TotalPeriod = end.Sub(start).Truncate(time.Hour * 24)
 	report.TotalTrades = len(trades)
+	report.trades = trades
 
 	var wg sync.WaitGroup
 	wg.Add(7)

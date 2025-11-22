@@ -58,10 +58,16 @@ func NewExecutionConfig(executionInterval types.Interval, barsBefore, barsAfter 
 
 type ReportingConfig struct {
 	sharpeRiskFreeRate decimal.Decimal
+	printTrades        bool
+	reportName         string
+	filePath           string
 }
 
-func NewReportingConfig(sharpeRiskFreeRate decimal.Decimal) *ReportingConfig {
+func NewReportingConfig(sharpeRiskFreeRate decimal.Decimal, reportFile bool, reportName string, filePath string) *ReportingConfig {
 	return &ReportingConfig{
 		sharpeRiskFreeRate: sharpeRiskFreeRate,
+		printTrades:        reportFile,
+		reportName:         reportName,
+		filePath:           filePath,
 	}
 }

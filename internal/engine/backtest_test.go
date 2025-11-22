@@ -678,7 +678,7 @@ func mockEngine(strat strategy, feeds []*DataFeedConfig, allocator allocator, br
 	for _, feed := range feeds {
 		executionConfig.candles[feed.ticker] = feed.candles
 	}
-	reportingConfig := NewReportingConfig(decimal.NewFromFloat(0.03))
+	reportingConfig := NewReportingConfig(decimal.NewFromFloat(0.03), false, "", "")
 	engine := NewEngine(feeds, executionConfig, reportingConfig, strat, allocator, broker, newPortfolio, db)
 	return engine
 }
