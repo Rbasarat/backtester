@@ -4,6 +4,8 @@ import (
 	"backtester/types"
 	"context"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 type dataStore interface {
@@ -32,4 +34,5 @@ type PortfolioApi interface {
 
 type backtesterApi interface {
 	getCurrentTime() time.Time
+	getLastPriceForTicker(ticker string) decimal.Decimal
 }

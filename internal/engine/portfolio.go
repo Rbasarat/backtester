@@ -34,7 +34,7 @@ func (p *portfolio) GetFillsForTicker(ticker string) []types.Fill {
 }
 
 type Position struct {
-	Symbol             string
+	Ticker             string
 	Quantity           decimal.Decimal
 	AvgCost            decimal.Decimal
 	LastExecutionPrice decimal.Decimal
@@ -56,10 +56,12 @@ func (p *portfolio) GetPortfolioSnapshot() types.PortfolioView {
 	}
 
 	for sym, pos := range p.positions {
+
 		view.Positions[sym] = types.PositionSnapshot{
-			Symbol:    pos.Symbol,
-			Quantity:  pos.Quantity,
-			LastPrice: pos.LastExecutionPrice,
+			Ticker:          pos.Ticker,
+			Quantity:        pos.Quantity,
+			AvgEntryPrice:   pos.AvgCost,
+			LastMarketPrice: p.backtesterApi.getLastPriceForTicker(sym),
 		}
 	}
 	return view
@@ -98,7 +100,7 @@ func (p *portfolio) processExecutions(execs []types.ExecutionReport) error {
 		pos := p.positions[er.Ticker]
 		if pos == nil {
 			// Create new position if it doesn't exist
-			pos = &Position{Symbol: er.Ticker}
+			pos = &Position{Ticker: er.Ticker}
 			p.positions[er.Ticker] = pos
 		}
 

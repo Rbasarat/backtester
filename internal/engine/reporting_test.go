@@ -445,10 +445,10 @@ func TestCalcCAGRFromSnapshots(t *testing.T) {
 					Cash: decimal.RequireFromString("1000"),
 					Positions: map[string]types.PositionSnapshot{
 						"AAA": {
-							Symbol:        "AAA",
-							Quantity:      decimal.RequireFromString("1"),
-							LastPrice:     decimal.RequireFromString("9000"),
-							AvgEntryPrice: decimal.RequireFromString("0"),
+							Ticker:          "AAA",
+							Quantity:        decimal.RequireFromString("1"),
+							LastMarketPrice: decimal.RequireFromString("9000"),
+							AvgEntryPrice:   decimal.RequireFromString("0"),
 						},
 					},
 				},
@@ -457,10 +457,10 @@ func TestCalcCAGRFromSnapshots(t *testing.T) {
 					Cash: decimal.RequireFromString("5000"),
 					Positions: map[string]types.PositionSnapshot{
 						"AAA": {
-							Symbol:        "AAA",
-							Quantity:      decimal.RequireFromString("1"),
-							LastPrice:     decimal.RequireFromString("14000"),
-							AvgEntryPrice: decimal.RequireFromString("0"),
+							Ticker:          "AAA",
+							Quantity:        decimal.RequireFromString("1"),
+							LastMarketPrice: decimal.RequireFromString("14000"),
+							AvgEntryPrice:   decimal.RequireFromString("0"),
 						},
 					},
 				},
@@ -475,10 +475,10 @@ func TestCalcCAGRFromSnapshots(t *testing.T) {
 					Cash: decimal.RequireFromString("1000"),
 					Positions: map[string]types.PositionSnapshot{
 						"AAA": {
-							Symbol:        "AAA",
-							Quantity:      decimal.RequireFromString("1"),
-							LastPrice:     decimal.RequireFromString("9000"),
-							AvgEntryPrice: decimal.RequireFromString("0"),
+							Ticker:          "AAA",
+							Quantity:        decimal.RequireFromString("1"),
+							LastMarketPrice: decimal.RequireFromString("9000"),
+							AvgEntryPrice:   decimal.RequireFromString("0"),
 						},
 					},
 				},
@@ -487,10 +487,10 @@ func TestCalcCAGRFromSnapshots(t *testing.T) {
 					Cash: decimal.RequireFromString("1000"),
 					Positions: map[string]types.PositionSnapshot{
 						"AAA": {
-							Symbol:        "AAA",
-							Quantity:      decimal.RequireFromString("1"),
-							LastPrice:     decimal.RequireFromString("14000"),
-							AvgEntryPrice: decimal.RequireFromString("0"),
+							Ticker:          "AAA",
+							Quantity:        decimal.RequireFromString("1"),
+							LastMarketPrice: decimal.RequireFromString("14000"),
+							AvgEntryPrice:   decimal.RequireFromString("0"),
 						},
 					},
 				},
@@ -521,10 +521,10 @@ func TestCalcCAGRFromSnapshots(t *testing.T) {
 					Cash: decimal.RequireFromString("1000"),
 					Positions: map[string]types.PositionSnapshot{
 						"AAA": {
-							Symbol:        "AAA",
-							Quantity:      decimal.RequireFromString("10"),
-							LastPrice:     decimal.RequireFromString("0"),
-							AvgEntryPrice: decimal.RequireFromString("0"),
+							Ticker:          "AAA",
+							Quantity:        decimal.RequireFromString("10"),
+							LastMarketPrice: decimal.RequireFromString("0"),
+							AvgEntryPrice:   decimal.RequireFromString("0"),
 						},
 					},
 				},
@@ -533,10 +533,10 @@ func TestCalcCAGRFromSnapshots(t *testing.T) {
 					Cash: decimal.RequireFromString("1000"),
 					Positions: map[string]types.PositionSnapshot{
 						"AAA": {
-							Symbol:        "AAA",
-							Quantity:      decimal.RequireFromString("10"),
-							LastPrice:     decimal.RequireFromString("0"),
-							AvgEntryPrice: decimal.RequireFromString("0"),
+							Ticker:          "AAA",
+							Quantity:        decimal.RequireFromString("10"),
+							LastMarketPrice: decimal.RequireFromString("0"),
+							AvgEntryPrice:   decimal.RequireFromString("0"),
 						},
 					},
 				},
@@ -571,10 +571,10 @@ func TestCalcCAGRFromSnapshots(t *testing.T) {
 					Cash: decimal.RequireFromString("0"),
 					Positions: map[string]types.PositionSnapshot{
 						"AAA": {
-							Symbol:        "AAA",
-							Quantity:      decimal.RequireFromString("10"),
-							LastPrice:     decimal.RequireFromString("100"),
-							AvgEntryPrice: decimal.RequireFromString("100"),
+							Ticker:          "AAA",
+							Quantity:        decimal.RequireFromString("10"),
+							LastMarketPrice: decimal.RequireFromString("100"),
+							AvgEntryPrice:   decimal.RequireFromString("100"),
 						},
 					},
 				},
@@ -583,10 +583,10 @@ func TestCalcCAGRFromSnapshots(t *testing.T) {
 					Cash: decimal.RequireFromString("0"),
 					Positions: map[string]types.PositionSnapshot{
 						"AAA": {
-							Symbol:        "AAA",
-							Quantity:      decimal.RequireFromString("10"),
-							LastPrice:     decimal.RequireFromString("200"),
-							AvgEntryPrice: decimal.RequireFromString("100"),
+							Ticker:          "AAA",
+							Quantity:        decimal.RequireFromString("10"),
+							LastMarketPrice: decimal.RequireFromString("200"),
+							AvgEntryPrice:   decimal.RequireFromString("100"),
 						},
 					},
 				},
@@ -1806,6 +1806,108 @@ func TestExecutionsToTrades(t *testing.T) {
 				if !reflect.DeepEqual(got[i], tc.wantTrades[i]) {
 					t.Fatalf("executionsToTrades() returned trade %v, want %v", got[i], tc.wantTrades[i])
 				}
+			}
+		})
+	}
+}
+
+func TestWinLossRatioDecimal(t *testing.T) {
+	tests := []struct {
+		name        string
+		trades      []trade
+		wantWins    decimal.Decimal
+		wantLosses  decimal.Decimal
+		wantWinRate decimal.Decimal
+	}{
+		{
+			name:        "no trades",
+			trades:      []trade{},
+			wantWins:    decimal.RequireFromString("0"),
+			wantLosses:  decimal.RequireFromString("0"),
+			wantWinRate: decimal.RequireFromString("0"),
+		},
+		{
+			name: "one winning trade",
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
+						TotalFilledQty: decimal.RequireFromString("1"),
+						AvgFillPrice:   decimal.RequireFromString("100"),
+						TotalFees:      decimal.RequireFromString("0"),
+					},
+					sell: &types.ExecutionReport{
+						TotalFilledQty: decimal.RequireFromString("1"),
+						AvgFillPrice:   decimal.RequireFromString("110"),
+						TotalFees:      decimal.RequireFromString("0"),
+					},
+				},
+			},
+			wantWins:    decimal.RequireFromString("1"),
+			wantLosses:  decimal.RequireFromString("0"),
+			wantWinRate: decimal.RequireFromString("1"),
+		},
+		{
+			name: "one winning and one losing trade",
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
+						TotalFilledQty: decimal.RequireFromString("1"),
+						AvgFillPrice:   decimal.RequireFromString("100"),
+						TotalFees:      decimal.RequireFromString("1"),
+					},
+					sell: &types.ExecutionReport{
+						TotalFilledQty: decimal.RequireFromString("1"),
+						AvgFillPrice:   decimal.RequireFromString("110"),
+						TotalFees:      decimal.RequireFromString("1"),
+					},
+				},
+				{
+					buy: &types.ExecutionReport{
+						TotalFilledQty: decimal.RequireFromString("1"),
+						AvgFillPrice:   decimal.RequireFromString("100"),
+						TotalFees:      decimal.RequireFromString("0"),
+					},
+					sell: &types.ExecutionReport{
+						TotalFilledQty: decimal.RequireFromString("1"),
+						AvgFillPrice:   decimal.RequireFromString("95"),
+						TotalFees:      decimal.RequireFromString("0"),
+					},
+				},
+			},
+			wantWins:    decimal.RequireFromString("1"),
+			wantLosses:  decimal.RequireFromString("1"),
+			wantWinRate: decimal.RequireFromString("0.5"),
+		},
+		{
+			name: "partial fill uses smaller qty and counts as win",
+			trades: []trade{
+				{
+					buy: &types.ExecutionReport{
+						TotalFilledQty: decimal.RequireFromString("2"),
+						AvgFillPrice:   decimal.RequireFromString("100"),
+						TotalFees:      decimal.RequireFromString("0"),
+					},
+					sell: &types.ExecutionReport{
+						TotalFilledQty: decimal.RequireFromString("1"),
+						AvgFillPrice:   decimal.RequireFromString("120"),
+						TotalFees:      decimal.RequireFromString("0"),
+					},
+				},
+			},
+			wantWins:    decimal.RequireFromString("1"),
+			wantLosses:  decimal.RequireFromString("0"),
+			wantWinRate: decimal.RequireFromString("1"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var wg sync.WaitGroup
+			wg.Add(1)
+			gotWinRate := calcWinLossRatio(tt.trades, &wg)
+
+			if !gotWinRate.Equal(tt.wantWinRate) {
+				t.Errorf("winRate = %s, want %s", gotWinRate, tt.wantWinRate)
 			}
 		})
 	}

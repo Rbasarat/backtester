@@ -30,7 +30,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash: decimal.NewFromFloat(8999),
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(10),
 						AvgCost:            decimal.NewFromFloat(100),
 						LastExecutionPrice: decimal.NewFromFloat(100),
@@ -44,7 +44,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash: decimal.NewFromFloat(10000),
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(10),
 						AvgCost:            decimal.NewFromFloat(100),
 						LastExecutionPrice: decimal.NewFromFloat(100),
@@ -58,7 +58,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash: decimal.NewFromFloat(9450),
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(15),
 						AvgCost:            decimal.NewFromFloat(103.3333333333333333),
 						LastExecutionPrice: decimal.NewFromFloat(110),
@@ -72,7 +72,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash: decimal.NewFromFloat(0),
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(10),
 						AvgCost:            decimal.NewFromFloat(100),
 						LastExecutionPrice: decimal.NewFromFloat(100),
@@ -86,7 +86,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash: decimal.NewFromFloat(419.5),
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(6),
 						AvgCost:            decimal.NewFromFloat(100),
 						LastExecutionPrice: decimal.NewFromFloat(105),
@@ -101,7 +101,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				allowShortSelling: true,
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(5),
 						AvgCost:            decimal.NewFromFloat(100),
 						LastExecutionPrice: decimal.NewFromFloat(100),
@@ -115,7 +115,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash: decimal.NewFromFloat(720),
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(-3),
 						AvgCost:            decimal.NewFromFloat(90),
 						LastExecutionPrice: decimal.NewFromFloat(90),
@@ -149,18 +149,18 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 			},
 		},
 		{
-			name: "two symbols updated independently",
+			name: "two tickers updated independently",
 			startPortfolio: portfolio{
 				cash: decimal.NewFromFloat(20000),
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(10),
 						AvgCost:            decimal.NewFromFloat(100),
 						LastExecutionPrice: decimal.NewFromFloat(100),
 					},
 					"MSFT": {
-						Symbol:             "MSFT",
+						Ticker:             "MSFT",
 						Quantity:           decimal.NewFromFloat(5),
 						AvgCost:            decimal.NewFromFloat(200),
 						LastExecutionPrice: decimal.NewFromFloat(200),
@@ -187,13 +187,13 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash: decimal.NewFromFloat(19839.65),
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(15),
 						AvgCost:            decimal.NewFromFloat(103.3333333),
 						LastExecutionPrice: decimal.NewFromFloat(110),
 					},
 					"MSFT": {
-						Symbol:             "MSFT",
+						Ticker:             "MSFT",
 						Quantity:           decimal.NewFromFloat(3),
 						AvgCost:            decimal.NewFromFloat(200),
 						LastExecutionPrice: decimal.NewFromFloat(195),
@@ -239,7 +239,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash: decimal.NewFromFloat(849.70),
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(10),
 						AvgCost:            decimal.NewFromFloat(15),
 						LastExecutionPrice: decimal.NewFromFloat(20),
@@ -248,7 +248,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 			},
 		},
 		{
-			name: "two execution reports for same symbol",
+			name: "two execution reports for same ticker",
 			startPortfolio: portfolio{
 				cash:      decimal.NewFromFloat(1000),
 				positions: map[string]*Position{},
@@ -295,7 +295,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash: decimal.NewFromFloat(849.70),
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(10),
 						AvgCost:            decimal.NewFromFloat(15),
 						LastExecutionPrice: decimal.NewFromFloat(20),
@@ -304,7 +304,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 			},
 		},
 		{
-			name: "unordered execution reports for same symbol",
+			name: "unordered execution reports for same ticker",
 			startPortfolio: portfolio{
 				cash:              decimal.NewFromFloat(1000),
 				positions:         map[string]*Position{},
@@ -352,7 +352,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash: decimal.NewFromFloat(849.70),
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(10),
 						AvgCost:            decimal.NewFromFloat(15),
 						LastExecutionPrice: decimal.NewFromFloat(20),
@@ -366,7 +366,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash: decimal.NewFromFloat(0),
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(5),
 						AvgCost:            decimal.NewFromFloat(100),
 						LastExecutionPrice: decimal.NewFromFloat(100),
@@ -398,7 +398,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 				cash: decimal.NewFromFloat(0),
 				positions: map[string]*Position{
 					"AAPL": {
-						Symbol:             "AAPL",
+						Ticker:             "AAPL",
 						Quantity:           decimal.NewFromFloat(5),
 						AvgCost:            decimal.NewFromFloat(100),
 						LastExecutionPrice: decimal.NewFromFloat(100),
@@ -536,7 +536,7 @@ func newFill(t time.Time, price, qty, fee string) types.Fill {
 	return types.Fill{Time: t, Price: decimal.RequireFromString(price), Quantity: decimal.RequireFromString(qty), Fee: decimal.RequireFromString(fee)}
 }
 
-func newExecutionReport(symbol string, side types.Side, fills ...types.Fill) types.ExecutionReport {
+func newExecutionReport(ticker string, side types.Side, fills ...types.Fill) types.ExecutionReport {
 	totalQty := decimal.Zero
 	totalFees := decimal.Zero
 	sum := decimal.Zero
@@ -558,7 +558,7 @@ func newExecutionReport(symbol string, side types.Side, fills ...types.Fill) typ
 	}
 
 	return types.ExecutionReport{
-		Ticker:         symbol,
+		Ticker:         ticker,
 		Side:           side,
 		Status:         types.OrderFilled,
 		Fills:          fills,

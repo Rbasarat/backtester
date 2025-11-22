@@ -7,7 +7,7 @@ import (
 )
 
 type Signal struct {
-	Symbol string
+	Ticker string
 	Side   Side
 	//Strength decimal.Decimal //TODO: We can use this for Signal normalization later
 	Price     decimal.Decimal
@@ -23,7 +23,7 @@ func NewSignal(
 	createdAt time.Time,
 ) Signal {
 	return Signal{
-		Symbol:    ticker,
+		Ticker:    ticker,
 		Side:      side,
 		Price:     price,
 		Reason:    reason,

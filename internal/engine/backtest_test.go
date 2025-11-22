@@ -648,6 +648,74 @@ func TestBacktest_getGlobalTimeRange(t *testing.T) {
 	}
 }
 
+func TestGetLastPriceForTicker(t *testing.T) {
+	// Common candle data used in all tests
+	candles := []types.Candle{
+		{Timestamp: time.Unix(0, 0), Close: decimal.NewFromInt(100)},
+		{Timestamp: time.Unix(60, 0), Close: decimal.NewFromInt(200)},
+		{Timestamp: time.Unix(120, 0), Close: decimal.NewFromInt(300)},
+	}
+
+	feed := &DataFeedConfig{
+		ticker:  "BTCUSDT",
+		candles: candles,
+		start:   candles[0].Timestamp,
+		end:     candles[len(candles)-1].Timestamp,
+	}
+
+	tests := []struct {
+		name      string
+		feeds     []*DataFeedConfig
+		feedIndex map[string]int
+		ticker    string
+		want      decimal.Decimal
+	}{
+		{
+			name:      "normal case (index 1 -> use candle[0])",
+			feeds:     []*DataFeedConfig{feed},
+			feedIndex: map[string]int{"BTCUSDT": 1},
+			ticker:    "BTCUSDT",
+			want:      decimal.NewFromInt(100),
+		},
+		{
+			name:      "index 0 -> idx - 1 = -1 -> clamped to 0",
+			feeds:     []*DataFeedConfig{feed},
+			feedIndex: map[string]int{"BTCUSDT": 0},
+			ticker:    "BTCUSDT",
+			want:      decimal.NewFromInt(100),
+		},
+		{
+			name:      "index beyond end -> clamped to last candle",
+			feeds:     []*DataFeedConfig{feed},
+			feedIndex: map[string]int{"BTCUSDT": 10},
+			ticker:    "BTCUSDT",
+			want:      decimal.NewFromInt(300),
+		},
+		{
+			name:      "ticker not found -> decimal.Zero",
+			feeds:     []*DataFeedConfig{feed},
+			feedIndex: map[string]int{},
+			ticker:    "ETHUSDT",
+			want:      decimal.Zero,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := &backtester{
+				feeds:     tt.feeds,
+				feedIndex: tt.feedIndex,
+			}
+
+			got := b.getLastPriceForTicker(tt.ticker)
+			if !got.Equal(tt.want) {
+				t.Fatalf("getLastPriceForTicker(%q) = %s, want %s",
+					tt.ticker, got.String(), tt.want.String())
+			}
+		})
+	}
+}
+
 // ----------------Helper functions----------------
 func mockCandles(startMilli int64, n int, assetID int) []types.Candle {
 	out := make([]types.Candle, 0, n)

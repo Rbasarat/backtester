@@ -7,7 +7,7 @@ import (
 )
 
 type Order struct {
-	Symbol       string
+	Ticker       string
 	Price        decimal.Decimal
 	Quantity     decimal.Decimal
 	OrderType    OrderType
@@ -17,7 +17,7 @@ type Order struct {
 }
 
 func NewOrder(
-	symbol string,
+	ticker string,
 	price decimal.Decimal,
 	quantity decimal.Decimal,
 	orderType OrderType,
@@ -26,7 +26,7 @@ func NewOrder(
 	createdAt time.Time,
 ) Order {
 	return Order{
-		Symbol:       symbol,
+		Ticker:       ticker,
 		Price:        price,
 		Quantity:     quantity,
 		OrderType:    orderType,

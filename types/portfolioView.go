@@ -13,8 +13,8 @@ type PortfolioView struct {
 }
 
 type PositionSnapshot struct {
-	Symbol        string
-	Quantity      decimal.Decimal
-	AvgEntryPrice decimal.Decimal
-	LastPrice     decimal.Decimal
+	Ticker          string
+	Quantity        decimal.Decimal
+	AvgEntryPrice   decimal.Decimal
+	LastMarketPrice decimal.Decimal
 }

@@ -3,6 +3,8 @@ package engine
 import (
 	"backtester/types"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 type backtester struct {
@@ -120,6 +122,22 @@ func getGlobalTimeRange(feeds []*DataFeedConfig) (time.Time, time.Time) {
 
 func (b *backtester) getCurrentTime() time.Time {
 	return b.curTime
+}
+func (b *backtester) getLastPriceForTicker(ticker string) decimal.Decimal {
+	for _, feed := range b.feeds {
+		if feed.ticker != ticker || len(feed.candles) == 0 {
+			continue
+		}
+		idx := b.feedIndex[ticker] - 1
+		if idx < 0 {
+			idx = 0
+		}
+		if idx >= len(feed.candles) {
+			idx = len(feed.candles) - 1
+		}
+		return feed.candles[idx].Close
+	}
+	return decimal.Zero
 }
 
 // Index only goes one way

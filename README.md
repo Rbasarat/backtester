@@ -7,7 +7,7 @@ core**.
 
 * **Backtest Engine:** runs simulations, manages data, portfolio, and metrics.
 * **Strategy Module:** defines buy/sell signals, position sizing, and risk rules.
-* Strategies can declare their own subscribed symbols and bar sizes.
+* Strategies can declare their own subscribed tickers and bar sizes.
 
 ## Design Highlights
 

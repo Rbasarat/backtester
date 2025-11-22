@@ -23,8 +23,9 @@ type Report struct {
 	CAGR                 decimal.Decimal
 
 	// Trade-level distribution metrics
-	AvgWin  decimal.Decimal
-	AvgLoss decimal.Decimal
+	AvgWin       decimal.Decimal
+	AvgLoss      decimal.Decimal
+	WinLossRatio decimal.Decimal
 
 	// Drawdown & loss streak metrics
 	MaxDrawdown          decimal.Decimal
@@ -52,34 +53,34 @@ type trade struct {
 
 // Report metrics
 func (e *Engine) printReport(report *Report) {
-
 	fmt.Println("===== Trading Report =====")
 	fmt.Printf("Start Date:            %s\n", report.StartDate.Format("2006-01-02"))
-	fmt.Printf("Total Period:          %d days\n", report.TotalPeriod/(24*time.Hour))
+	fmt.Printf("Total Period:          %d days\n", int(report.TotalPeriod.Hours()/24))
 	fmt.Printf("Total Trades:          %d\n", report.TotalTrades)
 
 	fmt.Println("\n-- Absolute Performance --")
-	fmt.Printf("Net Profit:            %s\n", report.NetProfit)
-	fmt.Printf("Avg Profit/Trade:      %s\n", report.NetAvgProfitPerTrade)
-	fmt.Printf("CAGR:                  %s\n", report.CAGR.Mul(decimal.NewFromFloat(100)))
+	fmt.Printf("Net Profit:            %.2f\n", report.NetProfit.InexactFloat64())
+	fmt.Printf("Avg Profit/Trade:      %.2f\n", report.NetAvgProfitPerTrade.InexactFloat64())
+	fmt.Printf("CAGR:                  %.2f%%\n", report.CAGR.Mul(decimal.NewFromFloat(100)).InexactFloat64())
 
 	fmt.Println("\n-- Trade-Level Metrics --")
-	fmt.Printf("Avg Win:               %s\n", report.AvgWin)
-	fmt.Printf("Avg Loss:              %s\n", report.AvgLoss)
+	fmt.Printf("Avg Win:               %.2f\n", report.AvgWin.InexactFloat64())
+	fmt.Printf("Avg Loss:              %.2f\n", report.AvgLoss.InexactFloat64())
+	fmt.Printf("Win Loss Ratio:        %.2f\n", report.WinLossRatio.InexactFloat64())
 
 	fmt.Println("\n-- Drawdown Metrics --")
-	fmt.Printf("Max Drawdown:          %s\n", report.MaxDrawdown)
-	fmt.Printf("Max Drawdown %%:        %s\n", report.MaxDrawdownPercent.Mul(decimal.NewFromFloat(100)))
-	fmt.Printf("Max Drawdown Days:     %v\n", report.MaxDrawdownDays/(24*time.Hour))
+	fmt.Printf("Max Drawdown:          %.2f\n", report.MaxDrawdown.InexactFloat64())
+	fmt.Printf("Max Drawdown %%:        %.2f%%\n", report.MaxDrawdownPercent.Mul(decimal.NewFromFloat(100)).InexactFloat64())
+	fmt.Printf("Max Drawdown Days:     %d\n", int(report.MaxDrawdownDays.Hours()/24))
 	fmt.Printf("Max Consecutive Losses: %d\n", report.MaxConsecutiveLosses)
 
 	fmt.Println("\n-- Risk-Adjusted Metrics --")
-	fmt.Printf("Sharpe Ratio:          %s\n", report.SharpeRatio)
-	fmt.Printf("Sortino Ratio:         %s\n", report.SortinoRatio)
-	fmt.Printf("Profit Factor:         %s\n", report.ProfitFactor)
+	fmt.Printf("Sharpe Ratio:          %.2f\n", report.SharpeRatio.InexactFloat64())
+	fmt.Printf("Sortino Ratio:         %.2f\n", report.SortinoRatio.InexactFloat64())
+	fmt.Printf("Profit Factor:         %.2f\n", report.ProfitFactor.InexactFloat64())
 
 	fmt.Println("\n-- Costs --")
-	fmt.Printf("Total Fees:            %s\n", report.TotalFees)
+	fmt.Printf("Total Fees:            %.2f\n", report.TotalFees.InexactFloat64())
 
 	fmt.Println("==========================")
 }
@@ -95,7 +96,7 @@ func (e *Engine) generateReport(start, end time.Time, results *portfolio) *Repor
 	report.trades = trades
 
 	var wg sync.WaitGroup
-	wg.Add(7)
+	wg.Add(8)
 	go func() {
 		report.NetProfit, report.TotalFees = calcNetProfitAndFees(trades, &wg)
 	}()
@@ -116,6 +117,9 @@ func (e *Engine) generateReport(start, end time.Time, results *portfolio) *Repor
 	}()
 	go func() {
 		report.SharpeRatio = calcSharpeRatio(results.snapshots, e.reportingConfig.sharpeRiskFreeRate, &wg)
+	}()
+	go func() {
+		report.WinLossRatio = calcWinLossRatio(trades, &wg)
 	}()
 	wg.Wait()
 
@@ -497,6 +501,46 @@ func calcSharpeRatio(
 	return decimal.NewFromFloat(sharpeAnnual)
 }
 
+func calcWinLossRatio(trades []trade, wg *sync.WaitGroup) decimal.Decimal {
+	defer wg.Done()
+	wins := decimal.Zero
+	losses := decimal.Zero
+
+	for _, tr := range trades {
+		if tr.buy == nil || tr.sell == nil {
+			continue
+		}
+
+		qty := tr.buy.TotalFilledQty
+		if tr.sell.TotalFilledQty.Cmp(qty) < 0 {
+			qty = tr.sell.TotalFilledQty
+		}
+		if qty.IsZero() {
+			continue
+		}
+
+		gross := tr.sell.AvgFillPrice.Sub(tr.buy.AvgFillPrice).Mul(qty)
+		fees := tr.buy.TotalFees.Add(tr.sell.TotalFees)
+		pnl := gross.Sub(fees)
+
+		switch pnl.Cmp(decimal.Zero) {
+		case 1: // > 0
+			wins = wins.Add(decimal.NewFromInt(1))
+		case -1: // < 0
+			losses = losses.Add(decimal.NewFromInt(1))
+		default: // == 0, ignore breakeven
+			continue
+		}
+	}
+
+	total := wins.Add(losses)
+	if total.IsZero() {
+		return decimal.Zero
+	}
+
+	return wins.Div(total)
+}
+
 func getMonthlyReturns(snapshots []types.PortfolioView) []decimal.Decimal {
 	if len(snapshots) == 0 {
 		return nil
@@ -586,7 +630,7 @@ func getMonthlyReturns(snapshots []types.PortfolioView) []decimal.Decimal {
 // Helper functions
 func executionsToTrades(p *portfolio) []trade {
 	// Group executions by ticker so we don't accidentally pair
-	// different symbols together.
+	// different ticker together.
 	execsByTicker := make(map[string][]types.ExecutionReport)
 	for _, exec := range p.executions {
 		execsByTicker[exec.Ticker] = append(execsByTicker[exec.Ticker], exec)
@@ -665,7 +709,7 @@ func portfolioValue(view types.PortfolioView) decimal.Decimal {
 	value := view.Cash
 
 	for _, pos := range view.Positions {
-		posVal := pos.Quantity.Mul(pos.LastPrice)
+		posVal := pos.Quantity.Mul(pos.LastMarketPrice)
 		value = value.Add(posVal)
 	}
 	return value

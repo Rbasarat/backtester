@@ -44,7 +44,7 @@ func NewEngine(
 		allocator:  sizer,
 		broker:     broker,
 		portfolio:  initPortfolio,
-		backtester: newBacktester(feeds, executionConfig, portfolioConfig, strat, sizer, broker, initPortfolio),
+		backtester: backtester,
 	}
 }
 
@@ -79,11 +79,18 @@ func (e *Engine) Run() error {
 	report := e.generateReport(e.backtester.start, e.backtester.curTime, e.backtester.portfolio)
 	e.printReport(report)
 	if e.reportingConfig.printTrades {
-		filename := fmt.Sprintf("%s/%s.csv", e.reportingConfig.filePath, e.reportingConfig.reportName)
-		err = e.writeTradesCSVFile(filename, report.trades)
+		filenameTrades := fmt.Sprintf("%s/%s_trades.csv", e.reportingConfig.filePath, e.reportingConfig.reportName)
+		err = e.writeTradesCSVFile(filenameTrades, report.trades)
 		if err != nil {
 			return err
 		}
+
+		filenamePortfolio := fmt.Sprintf("%s/%s_portfolio.csv", e.reportingConfig.filePath, e.reportingConfig.reportName)
+		err = e.writePortfolioCSVFile(filenamePortfolio, e.portfolio.snapshots)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	return nil

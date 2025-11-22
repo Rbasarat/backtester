@@ -7,7 +7,7 @@ import (
 	"errors"
 )
 
-// GetAssetByTicker retrieves an types.Asset by its ticker symbol.
+// GetAssetByTicker retrieves an types.Asset by its ticker.
 func (db *Database) GetAssetByTicker(ticker string, ctx context.Context) (*types.Asset, error) {
 	asset, err := db.assets.GetAssetByTicker(ctx, ticker)
 	if err != nil {
