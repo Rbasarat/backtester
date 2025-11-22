@@ -79,7 +79,7 @@ func (e *Engine) Run() error {
 	report := e.generateReport(e.backtester.start, e.backtester.curTime, e.backtester.portfolio)
 	e.printReport(report)
 	if e.reportingConfig.printTrades {
-		filename := fmt.Sprintf("%s/%s", e.reportingConfig.filePath, e.reportingConfig.reportName)
+		filename := fmt.Sprintf("%s/%s.csv", e.reportingConfig.filePath, e.reportingConfig.reportName)
 		err = e.writeTradesCSVFile(filename, report.trades)
 		if err != nil {
 			return err
