@@ -10,16 +10,18 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func TestCalcNetProfit(t *testing.T) {
+func TestCalcNetProfitAndFees(t *testing.T) {
 	tests := []struct {
-		name   string
-		trades []trade
-		want   decimal.Decimal
+		name     string
+		trades   []trade
+		wantNet  decimal.Decimal
+		wantFees decimal.Decimal
 	}{
 		{
-			name:   "no executions -> zero",
-			trades: []trade{},
-			want:   decimal.RequireFromString("0"),
+			name:     "no executions -> zero",
+			trades:   []trade{},
+			wantNet:  decimal.RequireFromString("0"),
+			wantFees: decimal.RequireFromString("0"),
 		},
 		{
 			name: "only buys -> unrealized -> only fees",
@@ -39,7 +41,8 @@ func TestCalcNetProfit(t *testing.T) {
 				},
 			},
 			// grossProfit = 0 (unrealized), fees = 0.5 -> net = -0.5
-			want: decimal.RequireFromString("-0.5"),
+			wantNet:  decimal.RequireFromString("-0.5"),
+			wantFees: decimal.RequireFromString("0.5"),
 		},
 		{
 			name: "only sells -> unrealized -> only fees",
@@ -59,7 +62,8 @@ func TestCalcNetProfit(t *testing.T) {
 				},
 			},
 			// grossProfit = 0 (unrealized), fees = 0.1 -> net = -0.1
-			want: decimal.RequireFromString("-0.1"),
+			wantNet:  decimal.RequireFromString("-0.1"),
+			wantFees: decimal.RequireFromString("0.1"),
 		},
 		{
 			name: "simple realized long trade (buy then sell, with fees)",
@@ -88,7 +92,8 @@ func TestCalcNetProfit(t *testing.T) {
 				},
 			},
 			// gross = -100 + 110 = 10, fees = 2 -> net = 8
-			want: decimal.RequireFromString("8"),
+			wantNet:  decimal.RequireFromString("8"),
+			wantFees: decimal.RequireFromString("2"),
 		},
 		{
 			name: "partially closed position still counted as realized (has buy and sell)",
@@ -117,7 +122,8 @@ func TestCalcNetProfit(t *testing.T) {
 				},
 			},
 			// gross = -200 + 110 = -90, fees = 0 -> net = -90
-			want: decimal.RequireFromString("-90"),
+			wantNet:  decimal.RequireFromString("-90"),
+			wantFees: decimal.RequireFromString("0"),
 		},
 		{
 			name: "multiple trades: some realized, some not",
@@ -145,9 +151,9 @@ func TestCalcNetProfit(t *testing.T) {
 						},
 					},
 				},
-				// trade2: realized short
+				// trade2: realized short (overall loss)
 				{
-					buy: &types.ExecutionReport{ // buy leg
+					buy: &types.ExecutionReport{
 						Side: types.SideTypeBuy,
 						Fills: []types.Fill{
 							{
@@ -157,7 +163,7 @@ func TestCalcNetProfit(t *testing.T) {
 							},
 						},
 					},
-					sell: &types.ExecutionReport{ // sell leg
+					sell: &types.ExecutionReport{
 						Side: types.SideTypeSell,
 						Fills: []types.Fill{
 							{
@@ -187,7 +193,8 @@ func TestCalcNetProfit(t *testing.T) {
 			// trade2: gross -10, fees 0
 			// trade3: gross ignored (unrealized), fees 0.1
 			// total gross = 0, total fees = 2.1 -> net = -2.1
-			want: decimal.RequireFromString("-2.1"),
+			wantNet:  decimal.RequireFromString("-2.1"),
+			wantFees: decimal.RequireFromString("2.1"),
 		},
 	}
 
@@ -196,10 +203,13 @@ func TestCalcNetProfit(t *testing.T) {
 			var wg sync.WaitGroup
 			wg.Add(1)
 
-			got := calcNetProfit(tt.trades, &wg)
+			gotNet, gotFees := calcNetProfitAndFees(tt.trades, &wg)
 
-			if !got.Equal(tt.want) {
-				t.Fatalf("calcNetProfit() = %s, want %s", got.String(), tt.want.String())
+			if !gotNet.Equal(tt.wantNet) || !gotFees.Equal(tt.wantFees) {
+				t.Fatalf(
+					"calcNetProfitAndFees() = net %s, fees %s, want net %s, fees %s",
+					gotNet.String(), gotFees.String(), tt.wantNet.String(), tt.wantFees.String(),
+				)
 			}
 		})
 	}

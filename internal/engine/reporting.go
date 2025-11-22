@@ -97,7 +97,7 @@ func (e *Engine) generateReport(start, end time.Time, results *portfolio) *Repor
 	var wg sync.WaitGroup
 	wg.Add(7)
 	go func() {
-		report.NetProfit = calcNetProfit(trades, &wg)
+		report.NetProfit, report.TotalFees = calcNetProfitAndFees(trades, &wg)
 	}()
 	go func() {
 		report.NetAvgProfitPerTrade = calcNetAvgProfitPerTrade(trades, &wg)
@@ -122,7 +122,7 @@ func (e *Engine) generateReport(start, end time.Time, results *portfolio) *Repor
 	return report
 }
 
-func calcNetProfit(trades []trade, wg *sync.WaitGroup) decimal.Decimal {
+func calcNetProfitAndFees(trades []trade, wg *sync.WaitGroup) (decimal.Decimal, decimal.Decimal) {
 	defer wg.Done()
 
 	grossProfit := decimal.Zero
@@ -166,7 +166,7 @@ func calcNetProfit(trades []trade, wg *sync.WaitGroup) decimal.Decimal {
 		totalFees = totalFees.Add(curFees)
 	}
 
-	return grossProfit.Sub(totalFees)
+	return grossProfit.Sub(totalFees), totalFees
 }
 
 func calcNetAvgProfitPerTrade(trades []trade, wg *sync.WaitGroup) decimal.Decimal {
