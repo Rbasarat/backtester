@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -13,7 +14,7 @@ import (
 // Global error declarations.
 var (
 	ErrIntervalNotSupported = errors.New("timeframe not supported")
-	ErrAssetNotFound        = errors.New("asset not found in datasource")
+	ErrAssetNotFound        = errors.New("not found in datasource")
 	ErrNoCandles            = errors.New("no candles found in datasource")
 )
 

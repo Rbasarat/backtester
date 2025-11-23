@@ -5,14 +5,15 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 )
 
-// GetAssetByTicker retrieves an types.Asset by its ticker.
+// GetAssetByTicker retrieves a types.Asset by its ticker.
 func (db *Database) GetAssetByTicker(ticker string, ctx context.Context) (*types.Asset, error) {
 	asset, err := db.assets.GetAssetByTicker(ctx, ticker)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrAssetNotFound
+			return nil, fmt.Errorf("ticker %s %w", ticker, ErrAssetNotFound)
 		}
 		return nil, err
 	}
