@@ -4,6 +4,7 @@ import (
 	"backtester/types"
 	"time"
 
+	"github.com/schollz/progressbar/v3"
 	"github.com/shopspring/decimal"
 )
 
@@ -49,6 +50,7 @@ func newBacktester(feeds []*DataFeedConfig, executionConfig *ExecutionConfig, po
 }
 
 func (b *backtester) run() error {
+	bar := initProgressBar(int(b.end.Sub(b.start).Minutes()))
 	for !b.curTime.After(b.end) {
 		var signals []types.Signal
 		for _, feed := range b.feeds {
@@ -87,6 +89,7 @@ func (b *backtester) run() error {
 
 		// We use time.Minute here because the lowest timeframe we have is minute
 		b.curTime = b.curTime.Add(time.Minute)
+		bar.Add(1)
 	}
 	return nil
 }
@@ -177,4 +180,20 @@ func advanceFeedIndex(candles []types.Candle, prevIndex int, curTime time.Time, 
 	}
 
 	return prevIndex
+}
+
+func initProgressBar(maxTicks int) *progressbar.ProgressBar {
+	return progressbar.NewOptions(maxTicks,
+		//progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionSetElapsedTime(true),
+		progressbar.OptionShowElapsedTimeOnFinish(),
+		progressbar.OptionSetDescription("Backtesting in progress..."),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}))
 }

@@ -3,6 +3,9 @@ package engine
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"os"
+	"time"
 )
 
 type Engine struct {
@@ -17,6 +20,7 @@ type Engine struct {
 	portfolio         *portfolio
 	backtester        *backtester
 	allowShortSelling bool
+	logger            *slog.Logger
 }
 
 func NewEngine(
@@ -45,53 +49,81 @@ func NewEngine(
 		broker:     broker,
 		portfolio:  initPortfolio,
 		backtester: backtester,
+		logger:     slog.New(slog.NewTextHandler(os.Stdout, nil)),
 	}
 }
 
 func (e *Engine) Run() error {
-	// Load the data
-	// TODO: we can parallelize loading data if needed
-	err := e.loadFeedData()
-	if err != nil {
-		return err
-	}
-	err = e.loadExecutionFeedData()
-	if err != nil {
-		return err
-	}
+	start := time.Now()
+	e.logger.Info("Starting backtest engine",
+		slog.Time("start_time", start),
+		slog.String("report_name", e.reportingConfig.reportName),
+	)
 
-	// Inititalize strategy
-	err = e.strategy.Init(e.backtester.portfolio)
-	if err != nil {
+	// Load feed data
+	e.logger.Info("Loading feed data")
+	if err := e.loadFeedData(); err != nil {
+		e.logger.Error("Failed to load feed data", slog.Any("error", err))
 		return err
 	}
-	err = e.allocator.Init(e.backtester.portfolio)
-	if err != nil {
-		return err
-	}
+	e.logger.Info("Feed data loaded")
 
-	// Do the run loop
-	err = e.backtester.run()
-	if err != nil {
+	// Load execution feed
+	e.logger.Info("Loading execution feed data")
+	if err := e.loadExecutionFeedData(); err != nil {
+		e.logger.Error("Failed to load execution feed", slog.Any("error", err))
 		return err
 	}
+	e.logger.Info("Execution feed data loaded")
 
+	// Initialize strategy and allocator
+	e.logger.Info("Initializing strategy and allocator")
+	if err := e.strategy.Init(e.backtester.portfolio); err != nil {
+		e.logger.Error("Strategy initialization failed", slog.Any("error", err))
+		return err
+	}
+	if err := e.allocator.Init(e.backtester.portfolio); err != nil {
+		e.logger.Error("Allocator initialization failed", slog.Any("error", err))
+		return err
+	}
+	e.logger.Info("Strategy and allocator initialized successfully")
+
+	// Run backtest
+	e.logger.Info("Start backtesting")
+	if err := e.backtester.run(); err != nil {
+		e.logger.Error("Backtest run failed", slog.Any("error", err))
+		return err
+	}
+	e.logger.Info("Backtest run completed",
+		slog.Time("end_sim_time", e.backtester.curTime),
+	)
+
+	// Generate report
+	e.logger.Info("Generating report")
 	report := e.generateReport(e.backtester.start, e.backtester.curTime, e.backtester.portfolio)
 	e.printReport(report)
+
+	// Write trade and portfolio files
 	if e.reportingConfig.printTrades {
 		filenameTrades := fmt.Sprintf("%s/%s_trades.csv", e.reportingConfig.filePath, e.reportingConfig.reportName)
-		err = e.writeTradesCSVFile(filenameTrades, report.trades)
-		if err != nil {
+		e.logger.Info("Writing trades to CSV", slog.String("file", filenameTrades))
+		if err := e.writeTradesCSVFile(filenameTrades, report.trades); err != nil {
+			e.logger.Error("Failed to write trades CSV", slog.Any("error", err))
 			return err
 		}
 
 		filenamePortfolio := fmt.Sprintf("%s/%s_portfolio.csv", e.reportingConfig.filePath, e.reportingConfig.reportName)
-		err = e.writePortfolioCSVFile(filenamePortfolio, e.portfolio.snapshots)
-		if err != nil {
+		e.logger.Info("Writing portfolio snapshots to CSV", slog.String("file", filenamePortfolio))
+		if err := e.writePortfolioCSVFile(filenamePortfolio, e.portfolio.snapshots); err != nil {
+			e.logger.Error("Failed to write portfolio CSV", slog.Any("error", err))
 			return err
 		}
-
 	}
+
+	e.logger.Info("Backtest completed successfully",
+		slog.Duration("total_runtime", time.Since(start)),
+		slog.String("report_name", e.reportingConfig.reportName),
+	)
 
 	return nil
 }
