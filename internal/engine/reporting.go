@@ -228,6 +228,7 @@ func calcNetAvgProfitPerTrade(trades []trade, wg *sync.WaitGroup) decimal.Decima
 
 func calcCAGR(snapshots []types.PortfolioView, wg *sync.WaitGroup) decimal.Decimal {
 	defer wg.Done()
+
 	if len(snapshots) < 2 {
 		return decimal.Zero
 	}
@@ -238,31 +239,32 @@ func calcCAGR(snapshots []types.PortfolioView, wg *sync.WaitGroup) decimal.Decim
 	startVal := portfolioValue(startSnap)
 	endVal := portfolioValue(endSnap)
 
-	// If starting value is <= 0, CAGR is not well-defined
-	if !startVal.GreaterThan(decimal.Zero) {
+	if startVal.LessThanOrEqual(decimal.Zero) {
 		return decimal.Zero
 	}
 
-	// time difference in years (using 365.25 days to account for leap years)
 	duration := endSnap.Time.Sub(startSnap.Time)
 	if duration <= 0 {
 		return decimal.Zero
 	}
-	years := duration.Hours() / (24.0 * 365.25)
 
-	if years <= 0 {
+	// More precise time in years using seconds
+	years := decimal.NewFromFloat(duration.Seconds()).
+		Div(decimal.NewFromFloat(31557600)) // 365.25 * 24 * 3600
+	if years.LessThanOrEqual(decimal.Zero) {
 		return decimal.Zero
 	}
 
 	ratio := endVal.Div(startVal)
-
-	if !ratio.GreaterThan(decimal.Zero) {
+	if ratio.LessThanOrEqual(decimal.Zero) {
 		return decimal.Zero
 	}
 
-	cagrFloat := math.Pow(ratio.InexactFloat64(), 1.0/years) - 1.0
+	// CAGR = ratio^(1/years) - 1 using decimal exponentiation
+	exponent := decimal.NewFromInt(1).Div(years)
+	cagr := ratio.Pow(exponent).Sub(decimal.NewFromInt(1))
 
-	return decimal.NewFromFloat(cagrFloat)
+	return cagr
 }
 
 func calcAvgWinLossPerTrade(trades []trade, wg *sync.WaitGroup) (decimal.Decimal, decimal.Decimal) {
