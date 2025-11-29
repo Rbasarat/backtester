@@ -52,7 +52,7 @@ func newBacktester(feeds []*DataFeedConfig, executionConfig *ExecutionConfig, po
 func (b *backtester) run() error {
 	bar := initProgressBar(int(b.end.Sub(b.start).Minutes()))
 	for !b.curTime.After(b.end) {
-		var signals []types.Signal
+		signals := make(map[string][]types.Signal)
 		for _, feed := range b.feeds {
 			i := b.feedIndex[feed.ticker]
 			if i >= len(feed.candles) {
@@ -62,7 +62,9 @@ func (b *backtester) run() error {
 			// Only send candles when they are fully closed.
 			candleCloseTime := curCandle.Timestamp.Add(types.IntervalToTime[feed.interval])
 			if candleCloseTime.Equal(b.curTime) {
-				signals = append(signals, b.strategy.OnCandle(curCandle)...)
+				curSignals := signals[feed.ticker]
+				curSignals = append(curSignals, b.strategy.OnCandle(curCandle)...)
+				signals[feed.ticker] = curSignals
 				b.feedIndex[feed.ticker]++
 			}
 			b.executionIndex[feed.ticker] = advanceFeedIndex(

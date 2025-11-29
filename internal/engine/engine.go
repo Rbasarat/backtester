@@ -101,7 +101,6 @@ func (e *Engine) Run() error {
 	// Generate report
 	e.logger.Info("Generating report")
 	report := e.generateReport(e.backtester.start, e.backtester.curTime, e.backtester.portfolio)
-	e.printReport(report)
 
 	// Write trade and portfolio files
 	if e.reportingConfig.printTrades {
@@ -124,6 +123,8 @@ func (e *Engine) Run() error {
 		slog.Duration("total_runtime", time.Since(start)),
 		slog.String("report_name", e.reportingConfig.reportName),
 	)
+
+	e.printReport(report)
 
 	return nil
 }

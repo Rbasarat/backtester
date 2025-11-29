@@ -20,7 +20,7 @@ type strategy interface {
 
 type allocator interface {
 	Init(api PortfolioApi) error
-	Allocate(signals []types.Signal, view types.PortfolioView) []types.Order
+	Allocate(signals map[string][]types.Signal, view types.PortfolioView) []types.Order
 }
 
 type broker interface {

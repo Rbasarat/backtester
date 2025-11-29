@@ -12,6 +12,82 @@ import (
 
 var testInterval = types.OneMinute
 
+func TestBacktester_PassesSignalsMapKeyedByTicker(t *testing.T) {
+	base := time.UnixMilli(0).UTC()
+	newTime := func(i int) time.Time { return base.Add(time.Duration(i) * time.Minute) }
+
+	// Build two feeds with distinct AssetIds so we can tell them apart in signals.
+	aaplCandles := []types.Candle{
+		mockCandle(1, newTime(0)),
+		mockCandle(1, newTime(1)),
+	}
+	googCandles := []types.Candle{
+		mockCandle(2, newTime(0)),
+		mockCandle(2, newTime(1)),
+	}
+
+	feeds := []*DataFeedConfig{
+		{
+			ticker:   "AAPL",
+			interval: testInterval,
+			start:    aaplCandles[0].Timestamp,
+			end:      aaplCandles[len(aaplCandles)-1].Timestamp,
+			candles:  aaplCandles,
+		},
+		{
+			ticker:   "GOOG",
+			interval: testInterval,
+			start:    googCandles[0].Timestamp,
+			end:      googCandles[len(googCandles)-1].Timestamp,
+			candles:  googCandles,
+		},
+	}
+
+	strat := &tickerTaggingStrategy{}
+	recAlloc := &recordingAllocator{}
+	testBroker := &mockBroker{}
+
+	engine := mockEngine(strat, feeds, recAlloc, testBroker)
+
+	if err := engine.Run(); err != nil {
+		t.Fatalf("Error running engine: %v", err)
+	}
+
+	// Flatten all allocator calls into a single aggregated map[ticker][]Signal
+	agg := make(map[string][]types.Signal)
+	for _, call := range recAlloc.calls {
+		for ticker, sigs := range call {
+			agg[ticker] = append(agg[ticker], sigs...)
+		}
+	}
+
+	// We expect only these tickers to appear as keys.
+	for ticker := range agg {
+		if ticker != "AAPL" && ticker != "GOOG" {
+			t.Fatalf("unexpected ticker key in signals map: %q", ticker)
+		}
+	}
+
+	for ticker, sigs := range agg {
+		if len(sigs) == 0 {
+			t.Fatalf("no signals recorded for ticker %q", ticker)
+		}
+		for _, s := range sigs {
+			gotTag := s.CreatedAt.UnixMilli()
+			switch ticker {
+			case "AAPL":
+				if gotTag != 1 {
+					t.Errorf("AAPL signal has tag %d, want 1", gotTag)
+				}
+			case "GOOG":
+				if gotTag != 2 {
+					t.Errorf("GOOG signal has tag %d, want 2", gotTag)
+				}
+			}
+		}
+	}
+}
+
 func TestBacktest_BacktesterBrokerUpdatePortfolio(t *testing.T) {
 	testStrat := allocatorStrategy{}
 	testAllocator := &mockAllocator{}
@@ -739,7 +815,7 @@ func (m *mockAllocator) Init(api PortfolioApi) error {
 	return nil
 }
 
-func (m *mockAllocator) Allocate(signals []types.Signal, view types.PortfolioView) []types.Order {
+func (m *mockAllocator) Allocate(signals map[string][]types.Signal, view types.PortfolioView) []types.Order {
 	m.callCount++
 	return nil
 }
@@ -833,4 +909,42 @@ func (a *allocatorStrategy) OnCandle(candle types.Candle) []types.Signal {
 		a.allocatorCalled++
 	}
 	return signals
+}
+
+// tickerTaggingStrategy emits a single Signal per candle whose CreatedAt
+// encodes the candle's AssetId, so we can later verify that signals were
+// grouped under the correct ticker.
+type tickerTaggingStrategy struct{}
+
+func (s *tickerTaggingStrategy) Init(api PortfolioApi) error {
+	return nil
+}
+
+func (s *tickerTaggingStrategy) OnCandle(c types.Candle) []types.Signal {
+	return []types.Signal{
+		{
+			// Use AssetId as a tag via UnixMilli so we can assert later.
+			CreatedAt: time.UnixMilli(int64(c.AssetId)),
+		},
+	}
+}
+
+// recordingAllocator records every signals map it receives from the backtester.
+type recordingAllocator struct {
+	calls []map[string][]types.Signal
+}
+
+func (a *recordingAllocator) Init(api PortfolioApi) error {
+	return nil
+}
+
+func (a *recordingAllocator) Allocate(signals map[string][]types.Signal, view types.PortfolioView) []types.Order {
+	cp := make(map[string][]types.Signal, len(signals))
+	for k, v := range signals {
+		sigsCopy := make([]types.Signal, len(v))
+		copy(sigsCopy, v)
+		cp[k] = sigsCopy
+	}
+	a.calls = append(a.calls, cp)
+	return nil
 }

@@ -15,6 +15,7 @@ var bucketToInterval = map[types.Interval]string{
 	types.ThirtyMinutes: "30 minute",
 	types.FourHours:     "4 hours",
 	types.Day:           "1 day",
+	types.Week:          "1 week",
 }
 
 func (db *Database) GetAggregates(assetId int, ticker string, interval types.Interval, start, end time.Time, ctx context.Context) ([]types.Candle, error) {
