@@ -153,7 +153,7 @@ func (e *Engine) loadExecutionFeedData() error {
 		if err != nil {
 			return err
 		}
-		cs, err := e.db.GetAggregates(asset.Id, asset.Ticker, feed.interval, feed.start, feed.end, ctx)
+		cs, err := e.db.GetAggregates(asset.Id, asset.Ticker, e.executionConfig.interval, feed.start, feed.end, ctx)
 		if err != nil {
 			return err
 		}

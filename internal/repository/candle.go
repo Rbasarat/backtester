@@ -13,6 +13,7 @@ var bucketToInterval = map[types.Interval]string{
 	types.OneMinute:     "1 minute",
 	types.FiveMinutes:   "5 minutes",
 	types.ThirtyMinutes: "30 minute",
+	types.Hour:          "1 hour",
 	types.FourHours:     "4 hours",
 	types.Day:           "1 day",
 	types.Week:          "1 week",

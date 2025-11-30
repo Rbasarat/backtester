@@ -28,6 +28,7 @@ var IntervalToTime = map[Interval]time.Duration{
 	TwoHours:       time.Hour * 2,
 	FourHours:      time.Hour * 4,
 	Day:            time.Hour * 24,
+	Week:           time.Hour * 24 * 5, // TODO: This is a stock week and not a forex/crypto week
 }
 
 var ConvertInterval = map[string]Interval{
