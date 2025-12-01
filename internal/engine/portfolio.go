@@ -23,14 +23,14 @@ type portfolio struct {
 	allowShortSelling bool
 }
 
-func (p *portfolio) GetFillsForTicker(ticker string) []types.Fill {
-	var fills []types.Fill
+func (p *portfolio) GetFillsForTicker(ticker string) []types.ExecutionReport {
+	var reports []types.ExecutionReport
 	for _, report := range p.executions {
 		if report.Ticker == ticker {
-			fills = append(fills, report.Fills...)
+			reports = append(reports, report)
 		}
 	}
-	return fills
+	return reports
 }
 
 type Position struct {
