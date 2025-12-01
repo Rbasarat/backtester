@@ -23,13 +23,25 @@ type portfolio struct {
 	allowShortSelling bool
 }
 
-func (p *portfolio) GetFillsForTicker(ticker string) []types.ExecutionReport {
+func (p *portfolio) GetExecutionReportsForTicker(ticker string) []types.ExecutionReport {
 	var reports []types.ExecutionReport
 	for _, report := range p.executions {
-		if report.Ticker == ticker {
-			reports = append(reports, report)
+		if report.Ticker != ticker {
+			continue
 		}
+
+		clone := report
+		if len(report.Fills) > 0 {
+			clone.Fills = make([]types.Fill, len(report.Fills))
+			copy(clone.Fills, report.Fills)
+		}
+		reports = append(reports, clone)
 	}
+
+	sort.Slice(reports, func(i, j int) bool {
+		return reports[i].ReportTime.Before(reports[j].ReportTime)
+	})
+
 	return reports
 }
 

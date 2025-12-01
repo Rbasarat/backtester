@@ -13,33 +13,18 @@ import (
 var testInterval = types.OneMinute
 
 func TestBacktester_PassesSignalsMapKeyedByTicker(t *testing.T) {
-	base := time.UnixMilli(0).UTC()
-	newTime := func(i int) time.Time { return base.Add(time.Duration(i) * time.Minute) }
-
-	// Build two feeds with distinct AssetIds so we can tell them apart in signals.
-	aaplCandles := []types.Candle{
-		mockCandle(1, newTime(0)),
-		mockCandle(1, newTime(1)),
-	}
-	googCandles := []types.Candle{
-		mockCandle(2, newTime(0)),
-		mockCandle(2, newTime(1)),
-	}
-
 	feeds := []*DataFeedConfig{
 		{
 			ticker:   "AAPL",
 			interval: testInterval,
-			start:    aaplCandles[0].Timestamp,
-			end:      aaplCandles[len(aaplCandles)-1].Timestamp,
-			candles:  aaplCandles,
+			start:    time.UnixMilli(0).UTC(),
+			end:      time.UnixMilli(60_000).UTC(),
 		},
 		{
 			ticker:   "GOOG",
 			interval: testInterval,
-			start:    googCandles[0].Timestamp,
-			end:      googCandles[len(googCandles)-1].Timestamp,
-			candles:  googCandles,
+			start:    time.UnixMilli(0).UTC(),
+			end:      time.UnixMilli(120_000).UTC(),
 		},
 	}
 
@@ -76,12 +61,12 @@ func TestBacktester_PassesSignalsMapKeyedByTicker(t *testing.T) {
 			gotTag := s.CreatedAt.UnixMilli()
 			switch ticker {
 			case "AAPL":
-				if gotTag != 1 {
-					t.Errorf("AAPL signal has tag %d, want 1", gotTag)
+				if gotTag != 0 {
+					t.Errorf("AAPL signal has tag %d, want 0", gotTag)
 				}
 			case "GOOG":
-				if gotTag != 2 {
-					t.Errorf("GOOG signal has tag %d, want 2", gotTag)
+				if gotTag != 1 {
+					t.Errorf("GOOG signal has tag %d, want 1", gotTag)
 				}
 			}
 		}
@@ -784,10 +769,17 @@ func mockFeed() []*DataFeedConfig {
 		NewDataFeedConfig("AAPL", testInterval, time.UnixMilli(0), time.UnixMilli(0).Add(types.IntervalToTime[testInterval]*time.Duration(5))))
 }
 func mockEngine(strat strategy, feeds []*DataFeedConfig, allocator allocator, broker broker) *Engine {
-	db := mockDb{}
+	db := mockDb{
+		assets: make(map[string]*types.Asset),
+	}
 	newPortfolio := NewPortfolioConfig(decimal.NewFromInt(100000), false)
 	executionConfig := NewExecutionConfig(types.OneMinute, 1, 1)
-	for _, feed := range feeds {
+	for i, feed := range feeds {
+		db.assets[feed.ticker] = &types.Asset{
+			Id:     i,
+			Ticker: feed.ticker,
+			Type:   types.AssetTypeStock,
+		}
 		executionConfig.candles[feed.ticker] = feed.candles
 	}
 	reportingConfig := NewReportingConfig(decimal.NewFromFloat(0.03), false, "", "")
@@ -821,15 +813,11 @@ func (m *mockAllocator) Allocate(signals map[string][]types.Signal, view types.P
 }
 
 type mockDb struct {
+	assets map[string]*types.Asset
 }
 
 func (m mockDb) GetAssetByTicker(ticker string, ctx context.Context) (*types.Asset, error) {
-	return &types.Asset{
-		Id:     1,
-		Ticker: "AAPL",
-		Name:   "Apple Inc.",
-		Type:   types.AssetTypeStock,
-	}, nil
+	return m.assets[ticker], nil
 }
 
 func mockCandle(assetId int, ts time.Time) types.Candle {

@@ -9,6 +9,87 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+func TestPortfolioGetFillsForTicker(t *testing.T) {
+	base := time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)
+
+	makeExec := func(ticker string, reportOffset time.Duration, fills ...types.Fill) types.ExecutionReport {
+		er := newExecutionReport(ticker, types.SideTypeBuy, fills...)
+		er.ReportTime = base.Add(reportOffset)
+		return er
+	}
+
+	tests := []struct {
+		name       string
+		ticker     string
+		execs      []types.ExecutionReport
+		wantLen    int
+		wantOrder  []time.Time
+		verifyFunc func(t *testing.T, got []types.ExecutionReport, p *portfolio)
+	}{
+		{
+			name:    "no executions returns empty slice",
+			ticker:  "AAPL",
+			execs:   nil,
+			wantLen: 0,
+		},
+		{
+			name:   "filters by ticker and sorts by report time",
+			ticker: "AAPL",
+			execs: []types.ExecutionReport{
+				makeExec("AAPL", 2*time.Hour, newFill(base.Add(2*time.Hour), "100", "1", "0")),
+				makeExec("MSFT", 30*time.Minute, newFill(base.Add(30*time.Minute), "200", "2", "0")),
+				makeExec("AAPL", 30*time.Minute, newFill(base.Add(30*time.Minute), "110", "1", "0")),
+			},
+			wantLen:   2,
+			wantOrder: []time.Time{base.Add(30 * time.Minute), base.Add(2 * time.Hour)},
+		},
+		{
+			name:   "returns deep copies of fills",
+			ticker: "TSLA",
+			execs: []types.ExecutionReport{
+				makeExec("TSLA", time.Hour, newFill(base, "150", "3", "1.5")),
+			},
+			wantLen:   1,
+			wantOrder: []time.Time{base.Add(time.Hour)},
+			verifyFunc: func(t *testing.T, got []types.ExecutionReport, p *portfolio) {
+				if len(got) == 0 || len(got[0].Fills) == 0 {
+					t.Fatalf("expected fills to mutate, got=%v", got)
+				}
+				original := p.executions[0].Fills[0].Price
+				got[0].Fills[0].Price = decimal.NewFromInt(999)
+				if !p.executions[0].Fills[0].Price.Equal(original) {
+					t.Fatalf("expected portfolio executions to remain unchanged")
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &portfolio{
+				executions: append([]types.ExecutionReport(nil), tc.execs...),
+			}
+			got := p.GetExecutionReportsForTicker(tc.ticker)
+
+			if len(got) != tc.wantLen {
+				t.Fatalf("len(got)=%d, want=%d", len(got), tc.wantLen)
+			}
+
+			if tc.wantOrder != nil {
+				for i, wantTime := range tc.wantOrder {
+					if !got[i].ReportTime.Equal(wantTime) {
+						t.Fatalf("report %d time=%s, want=%s", i, got[i].ReportTime, wantTime)
+					}
+				}
+			}
+
+			if tc.verifyFunc != nil {
+				tc.verifyFunc(t, got, p)
+			}
+		})
+	}
+}
+
 func TestPortfolioProcessExecutions(t *testing.T) {
 	tests := []struct {
 		name           string
