@@ -49,6 +49,7 @@ type Report struct {
 type trade struct {
 	buy  *types.ExecutionReport
 	sell *types.ExecutionReport
+	qty  decimal.Decimal
 }
 
 // Report metrics
@@ -631,61 +632,125 @@ func getMonthlyReturns(snapshots []types.PortfolioView) []decimal.Decimal {
 
 // Helper functions
 func executionsToTrades(p *portfolio) []trade {
-	// Group executions by ticker so we don't accidentally pair
-	// different ticker together.
+	// Group executions by ticker
 	execsByTicker := make(map[string][]types.ExecutionReport)
 	for _, exec := range p.executions {
+		// Ignore zero-filled execs
+		if exec.TotalFilledQty.IsZero() {
+			continue
+		}
 		execsByTicker[exec.Ticker] = append(execsByTicker[exec.Ticker], exec)
 	}
 
-	var trades []trade
+	var allTrades []trade
 
 	for _, execs := range execsByTicker {
-		// Sort executions for this ticker by time
+		// Sort by time for this ticker
 		sort.Slice(execs, func(i, j int) bool {
 			return execs[i].ReportTime.Before(execs[j].ReportTime)
 		})
 
-		// Pair them off 2-by-2: [0,1], [2,3], ...
-		for i := 0; i < len(execs); i += 2 {
-			// Normal pair
-			if i+1 < len(execs) {
-				a := &execs[i]
-				b := &execs[i+1]
+		type openLeg struct {
+			exec      *types.ExecutionReport
+			remaining decimal.Decimal
+		}
 
-				var newTrade trade
-				if a.Side == types.SideTypeBuy {
-					newTrade.buy = a
-					newTrade.sell = b
-				} else {
-					newTrade.buy = b
-					newTrade.sell = a
+		var openBuys []openLeg
+		var openSells []openLeg
+		var trades []trade
+
+		for i := range execs {
+			exec := &execs[i]
+			qty := exec.TotalFilledQty
+
+			switch exec.Side {
+			case types.SideTypeBuy:
+				// Use this buy to close existing shorts first
+				for qty.GreaterThan(decimal.Zero) && len(openSells) > 0 {
+					leg := &openSells[0]
+					matchQty := decimal.Min(qty, leg.remaining)
+
+					trades = append(trades, trade{
+						buy:  exec,
+						sell: leg.exec,
+						qty:  matchQty,
+					})
+
+					qty = qty.Sub(matchQty)
+					leg.remaining = leg.remaining.Sub(matchQty)
+					if !leg.remaining.GreaterThan(decimal.Zero) {
+						openSells = openSells[1:]
+					}
 				}
-				trades = append(trades, newTrade)
 
+				// Remaining becomes open long
+				if qty.GreaterThan(decimal.Zero) {
+					openBuys = append(openBuys, openLeg{
+						exec:      exec,
+						remaining: qty,
+					})
+				}
+
+			case types.SideTypeSell:
+				// Use this sell to close existing longs first
+				for qty.GreaterThan(decimal.Zero) && len(openBuys) > 0 {
+					leg := &openBuys[0]
+					matchQty := decimal.Min(qty, leg.remaining)
+
+					trades = append(trades, trade{
+						buy:  leg.exec,
+						sell: exec,
+						qty:  matchQty,
+					})
+
+					qty = qty.Sub(matchQty)
+					leg.remaining = leg.remaining.Sub(matchQty)
+					if !leg.remaining.GreaterThan(decimal.Zero) {
+						openBuys = openBuys[1:]
+					}
+				}
+
+				// Remaining becomes open short
+				if qty.GreaterThan(decimal.Zero) {
+					openSells = append(openSells, openLeg{
+						exec:      exec,
+						remaining: qty,
+					})
+				}
+			}
+		}
+
+		// Any remaining open legs become partial trades with qty = 0
+		for _, leg := range openBuys {
+			if leg.remaining.IsZero() {
 				continue
 			}
-
-			// Leftover single execution → partial trade
-			last := &execs[i]
-			var partial trade
-			if last.Side == types.SideTypeBuy {
-				partial.buy = last
-				partial.sell = nil
-			} else {
-				partial.buy = nil
-				partial.sell = last
-			}
-			trades = append(trades, partial)
+			trades = append(trades, trade{
+				buy: leg.exec,
+				// sell: nil,
+				qty: decimal.Zero, // NOTE: open long → qty = 0 per tests
+			})
 		}
+		for _, leg := range openSells {
+			if leg.remaining.IsZero() {
+				continue
+			}
+			trades = append(trades, trade{
+				// buy: nil,
+				sell: leg.exec,
+				qty:  decimal.Zero, // NOTE: open short → qty = 0 per tests
+			})
+		}
+
+		allTrades = append(allTrades, trades...)
 	}
 
-	// Sort resulting trades by the earliest non-nil leg time
-	sort.Slice(trades, func(i, j int) bool {
-		return tradeTime(trades[i]).Before(tradeTime(trades[j]))
+	// Sort trades by earliest leg time (same behavior tests expect)
+	sort.Slice(allTrades, func(i, j int) bool {
+		return tradeTime(allTrades[i]).Before(tradeTime(allTrades[j]))
 	})
 
-	return trades
+	return allTrades
 }
 
 // tradeTime returns the earliest non-nil leg time for a trade.

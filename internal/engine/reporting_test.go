@@ -1590,6 +1590,7 @@ func TestExecutionsToTrades(t *testing.T) {
 						ReportTime:     baseTime.Add(time.Minute),
 						TotalFilledQty: decimal.NewFromInt(10),
 					},
+					qty: decimal.NewFromInt(10),
 				},
 			},
 		},
@@ -1625,6 +1626,7 @@ func TestExecutionsToTrades(t *testing.T) {
 						ReportTime:     baseTime,
 						TotalFilledQty: decimal.NewFromInt(5),
 					},
+					qty: decimal.NewFromInt(5),
 				},
 			},
 		},
@@ -1674,6 +1676,7 @@ func TestExecutionsToTrades(t *testing.T) {
 						ReportTime:     baseTime.Add(time.Minute),
 						TotalFilledQty: decimal.NewFromInt(10),
 					},
+					qty: decimal.NewFromInt(10),
 				},
 				{
 					buy: &types.ExecutionReport{
@@ -1688,6 +1691,7 @@ func TestExecutionsToTrades(t *testing.T) {
 						ReportTime:     baseTime.Add(30 * time.Second),
 						TotalFilledQty: decimal.NewFromInt(3),
 					},
+					qty: decimal.NewFromInt(3),
 				},
 			},
 		},
@@ -1728,6 +1732,7 @@ func TestExecutionsToTrades(t *testing.T) {
 						ReportTime:     baseTime.Add(time.Minute),
 						TotalFilledQty: decimal.NewFromInt(10),
 					},
+					qty: decimal.NewFromInt(10),
 				},
 				{
 					buy: &types.ExecutionReport{
@@ -1737,6 +1742,7 @@ func TestExecutionsToTrades(t *testing.T) {
 						TotalFilledQty: decimal.NewFromInt(5),
 					},
 					sell: nil,
+					qty:  decimal.Zero,
 				},
 			},
 		},
@@ -1777,6 +1783,7 @@ func TestExecutionsToTrades(t *testing.T) {
 						ReportTime:     baseTime,
 						TotalFilledQty: decimal.NewFromInt(4),
 					},
+					qty: decimal.NewFromInt(4),
 				},
 				{
 					buy: nil,
@@ -1786,6 +1793,282 @@ func TestExecutionsToTrades(t *testing.T) {
 						ReportTime:     baseTime.Add(2 * time.Minute),
 						TotalFilledQty: decimal.NewFromInt(2),
 					},
+					qty: decimal.Zero,
+				},
+			},
+		},
+		{
+			name: "short then long, both trades completed",
+			executions: []types.ExecutionReport{
+				// First: short 5, then cover
+				{
+					Ticker:         "TSLA",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime,
+					TotalFilledQty: decimal.NewFromInt(5),
+				},
+				{
+					Ticker:         "TSLA",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime.Add(1 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(5),
+				},
+				// Then: long 10, then close
+				{
+					Ticker:         "TSLA",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime.Add(2 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(10),
+				},
+				{
+					Ticker:         "TSLA",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime.Add(3 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(10),
+				},
+			},
+			wantTrades: []trade{
+				{
+					// normalized: buy is the buy leg, sell is the sell leg
+					buy: &types.ExecutionReport{
+						Ticker:         "TSLA",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime.Add(1 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(5),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "TSLA",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime,
+						TotalFilledQty: decimal.NewFromInt(5),
+					},
+					qty: decimal.NewFromInt(5),
+				},
+				{
+					buy: &types.ExecutionReport{
+						Ticker:         "TSLA",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime.Add(2 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(10),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "TSLA",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime.Add(3 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(10),
+					},
+					qty: decimal.NewFromInt(10),
+				},
+			},
+		},
+		{
+			name: "long then short, both trades completed",
+			executions: []types.ExecutionReport{
+				// First: long 7, then close
+				{
+					Ticker:         "GOOG",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime,
+					TotalFilledQty: decimal.NewFromInt(7),
+				},
+				{
+					Ticker:         "GOOG",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime.Add(1 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(7),
+				},
+				// Then: short 3, then cover
+				{
+					Ticker:         "GOOG",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime.Add(2 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(3),
+				},
+				{
+					Ticker:         "GOOG",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime.Add(3 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(3),
+				},
+			},
+			wantTrades: []trade{
+				{
+					buy: &types.ExecutionReport{
+						Ticker:         "GOOG",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime,
+						TotalFilledQty: decimal.NewFromInt(7),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "GOOG",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime.Add(1 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(7),
+					},
+					qty: decimal.NewFromInt(7),
+				},
+				{
+					buy: &types.ExecutionReport{
+						Ticker:         "GOOG",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime.Add(3 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(3),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "GOOG",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime.Add(2 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(3),
+					},
+					qty: decimal.NewFromInt(3),
+				},
+			},
+		},
+		{
+			name: "short then long, with unfinished long",
+			executions: []types.ExecutionReport{
+				// Completed short: sell 5 then buy 5
+				{
+					Ticker:         "TSLA",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime,
+					TotalFilledQty: decimal.NewFromInt(5),
+				},
+				{
+					Ticker:         "TSLA",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime.Add(1 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(5),
+				},
+				// Long 10, only 6 gets closed → open long 4
+				{
+					Ticker:         "TSLA",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime.Add(2 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(10),
+				},
+				{
+					Ticker:         "TSLA",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime.Add(3 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(6),
+				},
+			},
+			wantTrades: []trade{
+				{
+					buy: &types.ExecutionReport{
+						Ticker:         "TSLA",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime.Add(1 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(5),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "TSLA",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime,
+						TotalFilledQty: decimal.NewFromInt(5),
+					},
+					qty: decimal.NewFromInt(5),
+				},
+				{
+					buy: &types.ExecutionReport{
+						Ticker:         "TSLA",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime.Add(2 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(10),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "TSLA",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime.Add(3 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(6),
+					},
+					qty: decimal.NewFromInt(6),
+				},
+				{
+					// open long of 4 → buy-only trade with qty = 0
+					buy: &types.ExecutionReport{
+						Ticker:         "TSLA",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime.Add(2 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(10),
+					},
+					sell: nil,
+					qty:  decimal.Zero,
+				},
+			},
+		},
+		{
+			name: "long then short, with unfinished short",
+			executions: []types.ExecutionReport{
+				// Completed long: buy 5 then sell 5
+				{
+					Ticker:         "GOOG",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime,
+					TotalFilledQty: decimal.NewFromInt(5),
+				},
+				{
+					Ticker:         "GOOG",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime.Add(1 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(5),
+				},
+				// Short 10, only 6 gets covered → open short 4
+				{
+					Ticker:         "GOOG",
+					Side:           types.SideTypeSell,
+					ReportTime:     baseTime.Add(2 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(10),
+				},
+				{
+					Ticker:         "GOOG",
+					Side:           types.SideTypeBuy,
+					ReportTime:     baseTime.Add(3 * time.Minute),
+					TotalFilledQty: decimal.NewFromInt(6),
+				},
+			},
+			wantTrades: []trade{
+				{
+					buy: &types.ExecutionReport{
+						Ticker:         "GOOG",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime,
+						TotalFilledQty: decimal.NewFromInt(5),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "GOOG",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime.Add(1 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(5),
+					},
+					qty: decimal.NewFromInt(5),
+				},
+				{
+					buy: &types.ExecutionReport{
+						Ticker:         "GOOG",
+						Side:           types.SideTypeBuy,
+						ReportTime:     baseTime.Add(3 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(6),
+					},
+					sell: &types.ExecutionReport{
+						Ticker:         "GOOG",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime.Add(2 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(10),
+					},
+					qty: decimal.NewFromInt(6),
+				},
+				{
+					// open short of 4 → sell-only trade with qty = 0
+					buy: nil,
+					sell: &types.ExecutionReport{
+						Ticker:         "GOOG",
+						Side:           types.SideTypeSell,
+						ReportTime:     baseTime.Add(2 * time.Minute),
+						TotalFilledQty: decimal.NewFromInt(10),
+					},
+					qty: decimal.Zero,
 				},
 			},
 		},
@@ -1804,7 +2087,7 @@ func TestExecutionsToTrades(t *testing.T) {
 			}
 			for i := range tc.wantTrades {
 				if !reflect.DeepEqual(got[i], tc.wantTrades[i]) {
-					t.Fatalf("executionsToTrades() returned trade %v, want %v", got[i], tc.wantTrades[i])
+					t.Fatalf("executionsToTrades() returned trade %+v, want %+v", got[i], tc.wantTrades[i])
 				}
 			}
 		})
