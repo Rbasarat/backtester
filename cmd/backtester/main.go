@@ -24,16 +24,16 @@ func main() {
 	start := time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	feeds := getETFPortfolio(start, end, types.Day)
+	feeds := getDonchianPortfolio(start, end, types.Week)
 
 	eng := engine.NewEngine(
 		feeds,
 		engine.NewExecutionConfig(types.Hour, 24, 24),
 		engine.NewReportingConfig(decimal.NewFromFloat(0.03), true, "donchian", "reports"),
 		&donchian.Strategy{},
-		donchian.NewLongOnlyAllocator(decimal.NewFromFloat(0.02)),
+		donchian.NewLongOnlyAllocator(decimal.NewFromFloat(0.1)),
 		&donchian.Broker{},
-		engine.NewPortfolioConfig(decimal.NewFromFloat(50000), true),
+		engine.NewPortfolioConfig(decimal.NewFromFloat(2000), true),
 		&db,
 	)
 
@@ -44,48 +44,64 @@ func main() {
 	}
 }
 
-func getETFPortfolio(start, end time.Time, interval types.Interval) []*engine.DataFeedConfig {
-	return engine.NewDataFeedConfigs(
-		engine.NewDataFeedConfig("QQQ", interval, start, end),
-		engine.NewDataFeedConfig("SPY", interval, start, end),
+func getETFPortfolio(start, end time.Time, interval types.Interval) []*engine.InstrumentConfig {
+	return engine.Instruments(
+		engine.Instrument("AMD", start, end, interval).AddContext(types.Week),
+		engine.Instrument("COST", start, end, interval),
 	)
 }
 
-func getDiversifiedPortfolio(start, end time.Time, interval types.Interval) []*engine.DataFeedConfig {
-	return engine.NewDataFeedConfigs(
+func getForexPortfolio(start, end time.Time, interval types.Interval) []*engine.InstrumentConfig {
+	return engine.Instruments(
+		engine.Instrument("EURUSD", start, end, interval),
+		engine.Instrument("USDJPY", start, end, interval),
+		engine.Instrument("GBPUSD", start, end, interval),
+		engine.Instrument("AUDUSD", start, end, interval),
+		engine.Instrument("USDCAD", start, end, interval),
+	)
+}
+
+func getDonchianPortfolio(start, end time.Time, interval types.Interval) []*engine.InstrumentConfig {
+	return engine.Instruments(
+		engine.Instrument("AMD", start, end, types.Hour).AddContext(types.Week),
+	)
+}
+
+func getDiversifiedPortfolio(start, end time.Time, interval types.Interval) []*engine.InstrumentConfig {
+	return engine.Instruments(
 		// ETF
-		engine.NewDataFeedConfig("SPY", interval, start, end),
-		engine.NewDataFeedConfig("QQQ", interval, start, end),
+		engine.Instrument("SPY", start, end, interval),
+		engine.Instrument("QQQ", start, end, interval),
 		// Consumer discretionary
-		engine.NewDataFeedConfig("WMT", interval, start, end),
-		engine.NewDataFeedConfig("NKE", interval, start, end),
+		engine.Instrument("WMT", start, end, interval),
+		engine.Instrument("NKE", start, end, interval),
 		// Energy
-		engine.NewDataFeedConfig("XOM", interval, start, end),
-		engine.NewDataFeedConfig("CVX", interval, start, end),
+		engine.Instrument("XOM", start, end, interval),
+		engine.Instrument("CVX", start, end, interval),
 		// Financials
-		engine.NewDataFeedConfig("SOFI", interval, start, end),
-		engine.NewDataFeedConfig("BAC", interval, start, end),
+		engine.Instrument("SOFI", start, end, interval),
+		engine.Instrument("BAC", start, end, interval),
 		// Health care
-		engine.NewDataFeedConfig("JNJ", interval, start, end),
-		engine.NewDataFeedConfig("UNH", interval, start, end),
+		engine.Instrument("JNJ", start, end, interval),
+		engine.Instrument("UNH", start, end, interval),
 		// Industrials
-		engine.NewDataFeedConfig("RTX", interval, start, end),
-		engine.NewDataFeedConfig("CAT", interval, start, end),
+		engine.Instrument("RTX", start, end, interval),
+		engine.Instrument("CAT", start, end, interval),
 		// Tech
-		engine.NewDataFeedConfig("NVDA", interval, start, end),
-		engine.NewDataFeedConfig("INTC", interval, start, end),
+		engine.Instrument("NVDA", start, end, interval),
+		engine.Instrument("INTC", start, end, interval),
 		// Materials
-		engine.NewDataFeedConfig("CDE", interval, start, end),
-		engine.NewDataFeedConfig("HL", interval, start, end),
+		engine.Instrument("CDE", start, end, interval),
+		engine.Instrument("HL", start, end, interval),
 		// Metals/mining
 		// Telecommunication
-		engine.NewDataFeedConfig("T", interval, start, end),
-		engine.NewDataFeedConfig("VZ", interval, start, end),
+		engine.Instrument("T", start, end, interval),
+		engine.Instrument("VZ", start, end, interval),
 		// Utilities
-		engine.NewDataFeedConfig("PCG", interval, start, end),
-		engine.NewDataFeedConfig("OKLO", interval, start, end),
+		engine.Instrument("PCG", start, end, interval),
+		engine.Instrument("OKLO", start, end, interval),
 		// Real estate
-		engine.NewDataFeedConfig("VICI", interval, start, end),
-		engine.NewDataFeedConfig("AGNC", interval, start, end),
+		engine.Instrument("VICI", start, end, interval),
+		engine.Instrument("AGNC", start, end, interval),
 	)
 }

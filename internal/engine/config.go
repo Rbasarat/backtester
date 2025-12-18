@@ -7,25 +7,40 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type DataFeedConfig struct {
+type InstrumentConfig struct {
 	ticker   string
 	interval types.Interval
 	start    time.Time
 	end      time.Time
+	primary  TimeframeConfig
+	context  []TimeframeConfig
+}
+
+type TimeframeConfig struct {
+	interval types.Interval
 	candles  []types.Candle
 }
 
-func NewDataFeedConfigs(feeds ...*DataFeedConfig) []*DataFeedConfig {
-	return feeds
+// TODO: we are doing a builder pattern for instruments.. lets do that for all config..
+func Instruments(cfg ...*InstrumentConfig) []*InstrumentConfig {
+	return cfg
 }
 
-func NewDataFeedConfig(ticker string, interval types.Interval, start, end time.Time) *DataFeedConfig {
-	return &DataFeedConfig{
+func Instrument(ticker string, start, end time.Time, primaryInterval types.Interval) *InstrumentConfig {
+	return &InstrumentConfig{
 		ticker:   ticker,
-		interval: interval,
+		interval: primaryInterval,
 		start:    start,
 		end:      end,
+		primary: TimeframeConfig{
+			interval: primaryInterval,
+		},
 	}
+}
+
+func (c *InstrumentConfig) AddContext(interval types.Interval) *InstrumentConfig {
+	c.context = append(c.context, TimeframeConfig{interval: interval})
+	return c
 }
 
 type PortfolioConfig struct {

@@ -13,7 +13,7 @@ import (
 var testInterval = types.OneMinute
 
 func TestBacktester_PassesSignalsMapKeyedByTicker(t *testing.T) {
-	feeds := []*DataFeedConfig{
+	feeds := []*InstrumentConfig{
 		{
 			ticker:   "AAPL",
 			interval: testInterval,
@@ -290,7 +290,7 @@ func TestBacktester_GetExecutionContext_SlicesAndMapsByTicker(t *testing.T) {
 	}
 
 	if got.Candles == nil {
-		t.Fatalf("Candles is nil; expected populated map (did you assign ctx.Candles?)")
+		t.Fatalf("candles is nil; expected populated map (did you assign ctx.candles?)")
 	}
 	if len(got.Candles) != len(want) {
 		t.Fatalf("top-level tickers len(got)=%d, want=%d", len(got.Candles), len(want))
@@ -299,7 +299,7 @@ func TestBacktester_GetExecutionContext_SlicesAndMapsByTicker(t *testing.T) {
 	for ticker, wantSlice := range want {
 		sub, ok := got.Candles[ticker]
 		if !ok {
-			t.Errorf("missing ticker %q in Candles", ticker)
+			t.Errorf("missing ticker %q in candles", ticker)
 			continue
 		}
 		if len(sub) != len(wantSlice) {
@@ -427,28 +427,28 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 	newTime := func(i int) time.Time { return base.Add(time.Duration(i) * time.Minute) }
 	tests := []struct {
 		name        string
-		feeds       []*DataFeedConfig
+		feeds       []*InstrumentConfig
 		wantCandles map[time.Time][]types.Candle
 	}{
 		{
 			name: "feed with no candles",
-			feeds: []*DataFeedConfig{
-				{ticker: "A", start: newTime(0), end: newTime(2), candles: nil},
+			feeds: []*InstrumentConfig{
+				{ticker: "A", start: newTime(0), end: newTime(2), primary: TimeframeConfig{candles: nil}},
 			},
 			wantCandles: map[time.Time][]types.Candle{},
 		},
 		{
-			name: "all feeds send same timestamp per tick",
-			feeds: []*DataFeedConfig{
+			name: "all instruments send same timestamp per tick",
+			feeds: []*InstrumentConfig{
 				{
 					ticker: "A",
 					start:  newTime(0),
 					end:    newTime(2),
-					candles: []types.Candle{
+					primary: TimeframeConfig{candles: []types.Candle{
 						mockCandle(1, newTime(0)),
 						mockCandle(1, newTime(1)),
 						mockCandle(1, newTime(2))},
-				},
+					}},
 			},
 			wantCandles: map[time.Time][]types.Candle{
 				newTime(0): {mockCandle(1, newTime(0))},
@@ -458,22 +458,24 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 		},
 		{
 			name: "one feed is subset of max range",
-			feeds: []*DataFeedConfig{
+			feeds: []*InstrumentConfig{
 				{
 					ticker: "A",
 					start:  newTime(0),
 					end:    newTime(2),
-					candles: []types.Candle{
+					primary: TimeframeConfig{candles: []types.Candle{
 						mockCandle(1, newTime(0)),
 						mockCandle(1, newTime(1)),
 						mockCandle(1, newTime(2))},
+					},
 				},
 				{
 					ticker: "B",
 					start:  newTime(1),
 					end:    newTime(1),
-					candles: []types.Candle{
-						mockCandle(1, newTime(1))},
+					primary: TimeframeConfig{candles: []types.Candle{
+						mockCandle(2, newTime(1)),
+					}},
 				},
 			},
 			wantCandles: map[time.Time][]types.Candle{
@@ -483,25 +485,27 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 			},
 		},
 		{
-			name: "two feeds send same timestamp per tick",
-			feeds: []*DataFeedConfig{
+			name: "two instruments send same timestamp per tick",
+			feeds: []*InstrumentConfig{
 				{
 					ticker: "A",
 					start:  newTime(0),
 					end:    newTime(2),
-					candles: []types.Candle{
+					primary: TimeframeConfig{candles: []types.Candle{
 						mockCandle(1, newTime(0)),
 						mockCandle(1, newTime(1)),
 						mockCandle(1, newTime(2))},
+					},
 				},
 				{
 					ticker: "B",
 					start:  newTime(0),
 					end:    newTime(2),
-					candles: []types.Candle{
+					primary: TimeframeConfig{candles: []types.Candle{
 						mockCandle(2, newTime(0)),
 						mockCandle(2, newTime(1)),
 						mockCandle(2, newTime(2))},
+					},
 				},
 			},
 			wantCandles: map[time.Time][]types.Candle{
@@ -512,16 +516,18 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 		},
 		{
 			name: "irregular intervals vs dense feed",
-			feeds: []*DataFeedConfig{
+			feeds: []*InstrumentConfig{
 				{ticker: "A", start: newTime(0), end: newTime(5),
-					candles: []types.Candle{
-						mockCandle(1, newTime(0)), mockCandle(1, newTime(3)), mockCandle(1, newTime(5)),
+					primary: TimeframeConfig{candles: []types.Candle{
+						mockCandle(1, newTime(0)),
+						mockCandle(1, newTime(3)),
+						mockCandle(1, newTime(5))},
 					},
 				},
 				{ticker: "B", start: newTime(0), end: newTime(5),
-					candles: []types.Candle{
+					primary: TimeframeConfig{candles: []types.Candle{
 						mockCandle(2, newTime(0)), mockCandle(2, newTime(1)), mockCandle(2, newTime(2)),
-						mockCandle(2, newTime(3)), mockCandle(2, newTime(4)), mockCandle(2, newTime(5)),
+						mockCandle(2, newTime(3)), mockCandle(2, newTime(4)), mockCandle(2, newTime(5))},
 					},
 				},
 			},
@@ -536,24 +542,26 @@ func TestBacktest_AllFeedsSendSameTimestampPerTick(t *testing.T) {
 		},
 		{
 			name: "one feed overlaps the other",
-			feeds: []*DataFeedConfig{
+			feeds: []*InstrumentConfig{
 				{
 					ticker: "A",
 					start:  newTime(0),
 					end:    newTime(2),
-					candles: []types.Candle{
+					primary: TimeframeConfig{candles: []types.Candle{
 						mockCandle(1, newTime(0)),
 						mockCandle(1, newTime(1)),
-						mockCandle(1, newTime(2))},
+						mockCandle(1, newTime(2)),
+					}},
 				},
 				{
 					ticker: "B",
 					start:  newTime(1),
 					end:    newTime(3),
-					candles: []types.Candle{
+					primary: TimeframeConfig{candles: []types.Candle{
 						mockCandle(2, newTime(1)),
 						mockCandle(2, newTime(2)),
-						mockCandle(2, newTime(3))},
+						mockCandle(2, newTime(3)),
+					}},
 				},
 			},
 			wantCandles: map[time.Time][]types.Candle{
@@ -627,38 +635,38 @@ func TestBacktest_getGlobalTimeRange(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		args      []*DataFeedConfig
+		args      []*InstrumentConfig
 		wantStart time.Time
 		wantEnd   time.Time
 	}{
 		{
 			name:      "should return 0",
-			args:      NewDataFeedConfigs(),
+			args:      Instruments(),
 			wantStart: time.UnixMilli(0),
 			wantEnd:   time.UnixMilli(0),
 		},
 		{
 			name: "should find min and max in first feed",
-			args: NewDataFeedConfigs(
-				&DataFeedConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(1), end: time.UnixMilli(2)},
+			args: Instruments(
+				&InstrumentConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(1), end: time.UnixMilli(2)},
 			),
 			wantStart: time.UnixMilli(1),
 			wantEnd:   time.UnixMilli(2),
 		},
 		{
 			name: "should find min in first and max in second feed",
-			args: NewDataFeedConfigs(
-				&DataFeedConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(1), end: time.UnixMilli(2)},
-				&DataFeedConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(2), end: time.UnixMilli(3)},
+			args: Instruments(
+				&InstrumentConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(1), end: time.UnixMilli(2)},
+				&InstrumentConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(2), end: time.UnixMilli(3)},
 			),
 			wantStart: time.UnixMilli(1),
 			wantEnd:   time.UnixMilli(3),
 		},
 		{
 			name: "should find min in second and max in first feed",
-			args: NewDataFeedConfigs(
-				&DataFeedConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(3), end: time.UnixMilli(6)},
-				&DataFeedConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(1), end: time.UnixMilli(2)},
+			args: Instruments(
+				&InstrumentConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(3), end: time.UnixMilli(6)},
+				&InstrumentConfig{ticker: "AAPL", interval: testInterval, start: time.UnixMilli(1), end: time.UnixMilli(2)},
 			),
 			wantStart: time.UnixMilli(1),
 			wantEnd:   time.UnixMilli(6),
@@ -685,44 +693,44 @@ func TestGetLastPriceForTicker(t *testing.T) {
 		{Timestamp: time.Unix(120, 0), Close: decimal.NewFromInt(300)},
 	}
 
-	feed := &DataFeedConfig{
+	feed := &InstrumentConfig{
 		ticker:  "BTCUSDT",
-		candles: candles,
+		primary: TimeframeConfig{candles: candles},
 		start:   candles[0].Timestamp,
 		end:     candles[len(candles)-1].Timestamp,
 	}
 
 	tests := []struct {
 		name      string
-		feeds     []*DataFeedConfig
+		feeds     []*InstrumentConfig
 		feedIndex map[string]int
 		ticker    string
 		want      decimal.Decimal
 	}{
 		{
 			name:      "normal case (index 1 -> use candle[0])",
-			feeds:     []*DataFeedConfig{feed},
+			feeds:     []*InstrumentConfig{feed},
 			feedIndex: map[string]int{"BTCUSDT": 1},
 			ticker:    "BTCUSDT",
 			want:      decimal.NewFromInt(100),
 		},
 		{
 			name:      "index 0 -> idx - 1 = -1 -> clamped to 0",
-			feeds:     []*DataFeedConfig{feed},
+			feeds:     []*InstrumentConfig{feed},
 			feedIndex: map[string]int{"BTCUSDT": 0},
 			ticker:    "BTCUSDT",
 			want:      decimal.NewFromInt(100),
 		},
 		{
 			name:      "index beyond end -> clamped to last candle",
-			feeds:     []*DataFeedConfig{feed},
+			feeds:     []*InstrumentConfig{feed},
 			feedIndex: map[string]int{"BTCUSDT": 10},
 			ticker:    "BTCUSDT",
 			want:      decimal.NewFromInt(300),
 		},
 		{
 			name:      "ticker not found -> decimal.Zero",
-			feeds:     []*DataFeedConfig{feed},
+			feeds:     []*InstrumentConfig{feed},
 			feedIndex: map[string]int{},
 			ticker:    "ETHUSDT",
 			want:      decimal.Zero,
@@ -732,8 +740,8 @@ func TestGetLastPriceForTicker(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := &backtester{
-				feeds:     tt.feeds,
-				feedIndex: tt.feedIndex,
+				instruments: tt.feeds,
+				feedIndex:   tt.feedIndex,
 			}
 
 			got := b.getLastPriceForTicker(tt.ticker)
@@ -764,11 +772,11 @@ func mockCandles(startMilli int64, n int, assetID int) []types.Candle {
 	return out
 }
 
-func mockFeed() []*DataFeedConfig {
-	return NewDataFeedConfigs(
-		NewDataFeedConfig("AAPL", testInterval, time.UnixMilli(0), time.UnixMilli(0).Add(types.IntervalToTime[testInterval]*time.Duration(5))))
+func mockFeed() []*InstrumentConfig {
+	return Instruments(
+		Instrument("AAPL", time.UnixMilli(0), time.UnixMilli(0).Add(types.IntervalToTime[testInterval]*time.Duration(5)), testInterval))
 }
-func mockEngine(strat strategy, feeds []*DataFeedConfig, allocator allocator, broker broker) *Engine {
+func mockEngine(strat strategy, feeds []*InstrumentConfig, allocator allocator, broker broker) *Engine {
 	db := mockDb{
 		assets: make(map[string]*types.Asset),
 	}
@@ -780,7 +788,7 @@ func mockEngine(strat strategy, feeds []*DataFeedConfig, allocator allocator, br
 			Ticker: feed.ticker,
 			Type:   types.AssetTypeStock,
 		}
-		executionConfig.candles[feed.ticker] = feed.candles
+		executionConfig.candles[feed.ticker] = feed.primary.candles
 	}
 	reportingConfig := NewReportingConfig(decimal.NewFromFloat(0.03), false, "", "")
 	engine := NewEngine(feeds, executionConfig, reportingConfig, strat, allocator, broker, newPortfolio, db)

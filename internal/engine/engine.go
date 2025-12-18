@@ -10,7 +10,7 @@ import (
 
 type Engine struct {
 	db                dataStore
-	feeds             []*DataFeedConfig
+	feeds             []*InstrumentConfig
 	executionConfig   *ExecutionConfig
 	portfolioConfig   *PortfolioConfig
 	reportingConfig   *ReportingConfig
@@ -24,7 +24,7 @@ type Engine struct {
 }
 
 func NewEngine(
-	feeds []*DataFeedConfig,
+	feeds []*InstrumentConfig,
 	executionConfig *ExecutionConfig,
 	reportingConfig *ReportingConfig,
 	strat strategy,
@@ -132,16 +132,16 @@ func (e *Engine) Run() error {
 func (e *Engine) loadFeedData() error {
 	ctx := context.Background()
 
-	for _, feed := range e.backtester.feeds {
-		asset, err := e.db.GetAssetByTicker(feed.ticker, ctx)
+	for _, instrument := range e.backtester.instruments {
+		asset, err := e.db.GetAssetByTicker(instrument.ticker, ctx)
 		if err != nil {
 			return err
 		}
-		cs, err := e.db.GetAggregates(asset.Id, asset.Ticker, feed.interval, feed.start, feed.end, ctx)
+		cs, err := e.db.GetAggregates(asset.Id, asset.Ticker, instrument.interval, instrument.start, instrument.end, ctx)
 		if err != nil {
 			return err
 		}
-		feed.candles = cs
+		instrument.primary.candles = cs
 	}
 	return nil
 }

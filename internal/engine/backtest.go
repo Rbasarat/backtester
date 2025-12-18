@@ -9,7 +9,7 @@ import (
 )
 
 type backtester struct {
-	feeds           []*DataFeedConfig
+	instruments     []*InstrumentConfig
 	executionConfig *ExecutionConfig
 	portfolioConfig *PortfolioConfig
 	strategy        strategy
@@ -24,7 +24,7 @@ type backtester struct {
 	executionIndex map[string]int
 }
 
-func newBacktester(feeds []*DataFeedConfig, executionConfig *ExecutionConfig, portfolioConfig *PortfolioConfig, strat strategy, sizing allocator, broker broker, portfolio *portfolio) *backtester {
+func newBacktester(feeds []*InstrumentConfig, executionConfig *ExecutionConfig, portfolioConfig *PortfolioConfig, strat strategy, sizing allocator, broker broker, portfolio *portfolio) *backtester {
 	start, end := getGlobalTimeRange(feeds)
 	feedIndex := make(map[string]int)
 	executionIndex := make(map[string]int)
@@ -37,7 +37,7 @@ func newBacktester(feeds []*DataFeedConfig, executionConfig *ExecutionConfig, po
 		start:           start,
 		end:             end,
 		curTime:         start,
-		feeds:           feeds,
+		instruments:     feeds,
 		executionConfig: executionConfig,
 		portfolioConfig: portfolioConfig,
 		strategy:        strat,
@@ -53,23 +53,23 @@ func (b *backtester) run() error {
 	bar := initProgressBar(int(b.end.Sub(b.start).Minutes()))
 	for !b.curTime.After(b.end) {
 		signals := make(map[string][]types.Signal)
-		for _, feed := range b.feeds {
-			i := b.feedIndex[feed.ticker]
-			if i >= len(feed.candles) {
+		for _, instrument := range b.instruments {
+			i := b.feedIndex[instrument.ticker]
+			if i >= len(instrument.primary.candles) {
 				continue
 			}
-			curCandle := feed.candles[i]
+			curCandle := instrument.primary.candles[i]
 			// Only send candles when they are fully closed.
-			candleCloseTime := curCandle.Timestamp.Add(types.IntervalToTime[feed.interval])
+			candleCloseTime := curCandle.Timestamp.Add(types.IntervalToTime[instrument.interval])
 			if candleCloseTime.Equal(b.curTime) {
-				curSignals := signals[feed.ticker]
+				curSignals := signals[instrument.ticker]
 				curSignals = append(curSignals, b.strategy.OnCandle(curCandle)...)
-				signals[feed.ticker] = curSignals
-				b.feedIndex[feed.ticker]++
+				signals[instrument.ticker] = curSignals
+				b.feedIndex[instrument.ticker]++
 			}
-			b.executionIndex[feed.ticker] = advanceFeedIndex(
-				b.executionConfig.candles[feed.ticker],
-				b.executionIndex[feed.ticker],
+			b.executionIndex[instrument.ticker] = advanceFeedIndex(
+				b.executionConfig.candles[instrument.ticker],
+				b.executionIndex[instrument.ticker],
 				b.curTime,
 				b.executionConfig.interval,
 			)
@@ -119,7 +119,7 @@ func (b *backtester) getExecutionContext() types.ExecutionContext {
 	return ctx
 }
 
-func getGlobalTimeRange(feeds []*DataFeedConfig) (time.Time, time.Time) {
+func getGlobalTimeRange(feeds []*InstrumentConfig) (time.Time, time.Time) {
 	if len(feeds) == 0 {
 		return time.UnixMilli(0), time.UnixMilli(0)
 	}
@@ -142,18 +142,18 @@ func (b *backtester) getCurrentTime() time.Time {
 	return b.curTime
 }
 func (b *backtester) getLastPriceForTicker(ticker string) decimal.Decimal {
-	for _, feed := range b.feeds {
-		if feed.ticker != ticker || len(feed.candles) == 0 {
+	for _, feed := range b.instruments {
+		if feed.ticker != ticker || len(feed.primary.candles) == 0 {
 			continue
 		}
 		idx := b.feedIndex[ticker] - 1
 		if idx < 0 {
 			idx = 0
 		}
-		if idx >= len(feed.candles) {
-			idx = len(feed.candles) - 1
+		if idx >= len(feed.primary.candles) {
+			idx = len(feed.primary.candles) - 1
 		}
-		return feed.candles[idx].Close
+		return feed.primary.candles[idx].Close
 	}
 	return decimal.Zero
 }
