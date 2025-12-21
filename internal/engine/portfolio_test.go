@@ -72,13 +72,13 @@ func TestPortfolioGetFillsForTicker(t *testing.T) {
 			got := p.GetExecutionReportsForTicker(tc.ticker)
 
 			if len(got) != tc.wantLen {
-				t.Fatalf("len(got)=%d, want=%d", len(got), tc.wantLen)
+				t.Fatalf("len(got)=%d, wantIndex=%d", len(got), tc.wantLen)
 			}
 
 			if tc.wantOrder != nil {
 				for i, wantTime := range tc.wantOrder {
 					if !got[i].ReportTime.Equal(wantTime) {
-						t.Fatalf("report %d time=%s, want=%s", i, got[i].ReportTime, wantTime)
+						t.Fatalf("report %d time=%s, wantIndex=%s", i, got[i].ReportTime, wantTime)
 					}
 				}
 			}
@@ -499,7 +499,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					t.Fatalf("expected error, got nil")
 				}
 				if err.Error() != tc.wantErr.Error() {
-					t.Fatalf("got error %q, want %q", err, tc.wantErr)
+					t.Fatalf("got error %q, wantIndex %q", err, tc.wantErr)
 				}
 				return
 			}
@@ -508,7 +508,7 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 			}
 
 			if want, got := tc.wantPortfolio.cash, tc.startPortfolio.cash; want.Cmp(got) != 0 {
-				t.Fatalf("cash mismatch: got %s want %s", got, want)
+				t.Fatalf("cash mismatch: got %s wantIndex %s", got, want)
 			}
 
 			for sym, wantPos := range tc.wantPortfolio.positions {
@@ -517,19 +517,19 @@ func TestPortfolioProcessExecutions(t *testing.T) {
 					t.Fatalf("position for %s missing", sym)
 				}
 				if !gotPos.Quantity.Equal(wantPos.Quantity) {
-					t.Fatalf("qty mismatch: got %s want %s", gotPos.Quantity, wantPos.Quantity)
+					t.Fatalf("qty mismatch: got %s wantIndex %s", gotPos.Quantity, wantPos.Quantity)
 				}
 				if !gotPos.AvgCost.RoundBank(6).Equal(wantPos.AvgCost.RoundBank(6)) {
-					t.Fatalf("avgCost mismatch: got %s want %s", gotPos.AvgCost, wantPos.AvgCost)
+					t.Fatalf("avgCost mismatch: got %s wantIndex %s", gotPos.AvgCost, wantPos.AvgCost)
 				}
 				if !gotPos.LastExecutionPrice.Equal(wantPos.LastExecutionPrice) {
-					t.Fatalf("lastPrice mismatch: got %s want %s", gotPos.LastExecutionPrice, wantPos.LastExecutionPrice)
+					t.Fatalf("lastPrice mismatch: got %s wantIndex %s", gotPos.LastExecutionPrice, wantPos.LastExecutionPrice)
 				}
 			}
 
 			// Ensure no unexpected positions
 			if len(tc.startPortfolio.positions) != len(tc.wantPortfolio.positions) {
-				t.Fatalf("unexpected extra positions: got %+v, want %+v", tc.startPortfolio.positions, tc.wantPortfolio.positions)
+				t.Fatalf("unexpected extra positions: got %+v, wantIndex %+v", tc.startPortfolio.positions, tc.wantPortfolio.positions)
 			}
 		})
 	}
@@ -605,7 +605,7 @@ func TestWeightedAvgPrice(t *testing.T) {
 
 			// For cases with repeating decimals, compare using Cmp (exact decimal equality).
 			if !got.Equal(tc.want) {
-				t.Fatalf("got %s, want %s", got.String(), tc.want.String())
+				t.Fatalf("got %s, wantIndex %s", got.String(), tc.want.String())
 			}
 		})
 	}

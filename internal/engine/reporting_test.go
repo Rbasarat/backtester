@@ -207,7 +207,7 @@ func TestCalcNetProfitAndFees(t *testing.T) {
 
 			if !gotNet.Equal(tt.wantNet) || !gotFees.Equal(tt.wantFees) {
 				t.Fatalf(
-					"calcNetProfitAndFees() = net %s, fees %s, want net %s, fees %s",
+					"calcNetProfitAndFees() = net %s, fees %s, wantIndex net %s, fees %s",
 					gotNet.String(), gotFees.String(), tt.wantNet.String(), tt.wantFees.String(),
 				)
 			}
@@ -423,7 +423,7 @@ func TestNetAvgProfitPerTrade(t *testing.T) {
 			got := calcNetAvgProfitPerTrade(tt.trades, &wg)
 
 			if !got.Equal(tt.want) {
-				t.Fatalf("NetAvgProfitPerTrade() = %s, want %s", got.String(), tt.want.String())
+				t.Fatalf("NetAvgProfitPerTrade() = %s, wantIndex %s", got.String(), tt.want.String())
 			}
 		})
 	}
@@ -639,7 +639,7 @@ func TestCalcCAGRFromSnapshots(t *testing.T) {
 			got := calcCAGR(tt.snapshots, &wg)
 			dec100 := decimal.NewFromInt(100)
 			if !got.Mul(dec100).Round(2).Equal(tt.want.Mul(dec100).Round(2)) {
-				t.Fatalf("calcCAGR got = %v, want %v", got.Mul(dec100).Round(2), tt.want.Mul(dec100).Round(2))
+				t.Fatalf("calcCAGR got = %v, wantIndex %v", got.Mul(dec100).Round(2), tt.want.Mul(dec100).Round(2))
 			}
 		})
 	}
@@ -865,10 +865,10 @@ func TestCalcAvgWinLossPerTrade(t *testing.T) {
 			gotWin, gotLoss := calcAvgWinLossPerTrade(tt.trades, &wg)
 
 			if !gotWin.Equal(tt.wantAvgWin) {
-				t.Fatalf("calcAvgWinLossPerTrade avgWin = %s, want %s", gotWin.String(), tt.wantAvgWin.String())
+				t.Fatalf("calcAvgWinLossPerTrade avgWin = %s, wantIndex %s", gotWin.String(), tt.wantAvgWin.String())
 			}
 			if !gotLoss.Equal(tt.wantAvgLoss) {
-				t.Fatalf("calcAvgWinLossPerTrade avgLoss = %s, want %s", gotLoss.String(), tt.wantAvgLoss.String())
+				t.Fatalf("calcAvgWinLossPerTrade avgLoss = %s, wantIndex %s", gotLoss.String(), tt.wantAvgLoss.String())
 			}
 		})
 	}
@@ -987,13 +987,13 @@ func TestCalcMaxDrawdownMetrics(t *testing.T) {
 			gotDD, gotDDPct, gotDur := calcDrawdownMetrics(tt.snapshots, &wg)
 
 			if !gotDD.Equal(tt.wantMaxDD) {
-				t.Fatalf("max drawdown = %s, want %s", gotDD.String(), tt.wantMaxDD.String())
+				t.Fatalf("max drawdown = %s, wantIndex %s", gotDD.String(), tt.wantMaxDD.String())
 			}
 			if !gotDDPct.Equal(tt.wantMaxDDPct) {
-				t.Fatalf("max drawdown pct = %s, want %s", gotDDPct.String(), tt.wantMaxDDPct.String())
+				t.Fatalf("max drawdown pct = %s, wantIndex %s", gotDDPct.String(), tt.wantMaxDDPct.String())
 			}
 			if gotDur != tt.wantMaxDDDur {
-				t.Fatalf("max drawdown duration = %s, want %s", gotDur, tt.wantMaxDDDur)
+				t.Fatalf("max drawdown duration = %s, wantIndex %s", gotDur, tt.wantMaxDDDur)
 			}
 		})
 	}
@@ -1346,7 +1346,7 @@ func TestCalcMaxConsecutiveLosses(t *testing.T) {
 			got := calcMaxConsecutiveLosses(tt.trades, &wg)
 
 			if got != tt.want {
-				t.Fatalf("calcMaxConsecutiveLosses() = %d, want %d", got, tt.want)
+				t.Fatalf("calcMaxConsecutiveLosses() = %d, wantIndex %d", got, tt.want)
 			}
 		})
 	}
@@ -1446,11 +1446,11 @@ func TestMonthlyReturnsFromSnapshots(t *testing.T) {
 				return
 			}
 			if len(got) != len(tt.want) {
-				t.Fatalf("len(got)=%d, len(want)=%d, got=%v, want=%v", len(got), len(tt.want), got, tt.want)
+				t.Fatalf("len(got)=%d, len(wantIndex)=%d, got=%v, wantIndex=%v", len(got), len(tt.want), got, tt.want)
 			}
 			for i := range got {
 				if !got[i].Equal(tt.want[i]) {
-					t.Fatalf("index %d: got=%s, want=%s", i, got[i].String(), tt.want[i].String())
+					t.Fatalf("index %d: got=%s, wantIndex=%s", i, got[i].String(), tt.want[i].String())
 				}
 			}
 		})
@@ -1546,7 +1546,7 @@ func TestCalcSharpeRatioFromSnapshots(t *testing.T) {
 			wg.Add(1)
 			got := calcSharpeRatio(tt.snapshots, tt.riskFree, &wg)
 			if !got.Round(4).Equal(tt.wantSharpe.Round(4)) {
-				t.Fatalf("got=%s, want=%s", got.Round(4), tt.wantSharpe.Round(4))
+				t.Fatalf("got=%s, wantIndex=%s", got.Round(4), tt.wantSharpe.Round(4))
 			}
 		})
 	}
@@ -2083,11 +2083,11 @@ func TestExecutionsToTrades(t *testing.T) {
 			got := executionsToTrades(p)
 
 			if len(got) != len(tc.wantTrades) {
-				t.Fatalf("executionsToTrades() returned %d trades, want %d", len(got), len(tc.wantTrades))
+				t.Fatalf("executionsToTrades() returned %d trades, wantIndex %d", len(got), len(tc.wantTrades))
 			}
 			for i := range tc.wantTrades {
 				if !reflect.DeepEqual(got[i], tc.wantTrades[i]) {
-					t.Fatalf("executionsToTrades() returned trade %+v, want %+v", got[i], tc.wantTrades[i])
+					t.Fatalf("executionsToTrades() returned trade %+v, wantIndex %+v", got[i], tc.wantTrades[i])
 				}
 			}
 		})
@@ -2190,7 +2190,7 @@ func TestWinLossRatioDecimal(t *testing.T) {
 			gotWinRate := calcWinLossRatio(tt.trades, &wg)
 
 			if !gotWinRate.Equal(tt.wantWinRate) {
-				t.Errorf("winRate = %s, want %s", gotWinRate, tt.wantWinRate)
+				t.Errorf("winRate = %s, wantIndex %s", gotWinRate, tt.wantWinRate)
 			}
 		})
 	}

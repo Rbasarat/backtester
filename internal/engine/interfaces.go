@@ -15,7 +15,7 @@ type dataStore interface {
 
 type strategy interface {
 	Init(api PortfolioApi) error
-	OnCandle(candle types.Candle) []types.Signal
+	OnCandle(candle types.Candle, contexts map[types.Interval][]types.Candle) []types.Signal
 }
 
 type allocator interface {
