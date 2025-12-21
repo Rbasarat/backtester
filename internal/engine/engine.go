@@ -60,13 +60,19 @@ func (e *Engine) Run() error {
 		slog.String("report_name", e.reportingConfig.reportName),
 	)
 
-	// Load feed data
 	e.logger.Info("Loading feed data")
 	if err := e.loadFeedData(); err != nil {
 		e.logger.Error("Failed to load feed data", slog.Any("error", err))
 		return err
 	}
 	e.logger.Info("Feed data loaded")
+
+	e.logger.Info("Loading context data")
+	if err := e.loadContextData(); err != nil {
+		e.logger.Error("Failed to load context data", slog.Any("error", err))
+		return err
+	}
+	e.logger.Info("context data loaded")
 
 	// Load execution feed
 	e.logger.Info("Loading execution feed data")
@@ -142,6 +148,25 @@ func (e *Engine) loadFeedData() error {
 			return err
 		}
 		instrument.primary.candles = cs
+	}
+	return nil
+}
+
+func (e *Engine) loadContextData() error {
+	ctx := context.Background()
+
+	for _, instrument := range e.backtester.instruments {
+		for i, config := range instrument.context {
+			asset, err := e.db.GetAssetByTicker(instrument.ticker, ctx)
+			if err != nil {
+				return err
+			}
+			cs, err := e.db.GetAggregates(asset.Id, asset.Ticker, config.interval, instrument.start, instrument.end, ctx)
+			if err != nil {
+				return err
+			}
+			instrument.context[i].candles = cs
+		}
 	}
 	return nil
 }
