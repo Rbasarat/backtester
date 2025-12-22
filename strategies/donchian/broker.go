@@ -40,6 +40,23 @@ func ibkrNetherlandsFixedUSDFee(tradeValue decimal.Decimal) decimal.Decimal {
 	return fee
 }
 
+func ibkrForexTier1LowestUSDFee(tradeValueUSD decimal.Decimal) decimal.Decimal {
+	if tradeValueUSD.LessThanOrEqual(decimal.Zero) {
+		return decimal.Zero
+	}
+
+	// 0.20 basis point = 0.20 * 0.0001 = 0.00002
+	rate := decimal.RequireFromString("0.00002")
+	fee := tradeValueUSD.Mul(rate)
+
+	minFee := decimal.RequireFromString("2.00")
+	if fee.LessThan(minFee) {
+		fee = minFee
+	}
+
+	return fee
+}
+
 // Execute fills all orders at the OPEN of the next available candle for that ticker.
 // Fee model (IBKR Netherlands, USD, Fixed - SmartRouting):
 //   - Commission = 0.05% of trade value

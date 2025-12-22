@@ -94,21 +94,9 @@ func (a *LongOnlyAllocator) Allocate(signals map[string][]types.Signal, view typ
 				orders = append(orders, types.NewOrder(
 					ticker, curSignal.Price, qty,
 					types.TypeLimit, types.SideTypeBuy,
-					"Closing short (long-only, switching to long): "+curSignal.Reason,
+					"Closing short (long-only): "+curSignal.Reason,
 					curSignal.CreatedAt,
 				))
-
-				// Optionally open a new long (still long-only)
-				cashForSignal := view.Cash.Mul(a.positionPercent)
-				newQty := getQuantityForPrice(curSignal.Price, cashForSignal)
-				if !newQty.IsZero() {
-					orders = append(orders, types.NewOrder(
-						ticker, curSignal.Price, newQty,
-						types.TypeLimit, types.SideTypeBuy,
-						"Opening new long after closing short: "+curSignal.Reason,
-						curSignal.CreatedAt,
-					))
-				}
 			}
 			continue
 		}

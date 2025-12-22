@@ -8,40 +8,25 @@ import (
 )
 
 type Strategy struct {
-	// store WEEKLY candles per ticker
-	history   map[string][]types.Candle
 	portfolio engine.PortfolioApi
-	stopLoss  map[string]decimal.Decimal
 }
 
 func (s *Strategy) Init(api engine.PortfolioApi) error {
 	s.portfolio = api
-	s.history = make(map[string][]types.Candle)
-	s.stopLoss = make(map[string]decimal.Decimal)
 	return nil
 }
 
-func (s *Strategy) OnCandle(candle types.Candle) []types.Signal {
-	hist := s.history[candle.Ticker]
-	hist = append(hist, candle)
-	s.history[candle.Ticker] = hist
+func (s *Strategy) OnCandle(candle types.Candle, contexts map[types.Interval][]types.Candle) []types.Signal {
 
-	// Need at least 5 weekly candles:
-	//  - 4 *completed* weeks for the channel
-	//  - current week for possible breakout
-	if len(hist) < 21 {
+	if len(contexts[types.Week]) < 4 {
 		return nil
 	}
 
-	// Last 4 COMPLETED weeks (excluding current)
-	last4Weeks := hist[len(hist)-21 : len(hist)-1]
+	last4Weeks := contexts[types.Week][len(contexts[types.Week])-4:]
 	highestHigh, lowestLow := donchianHighLow(last4Weeks)
 
 	var signals []types.Signal
 
-	// BUY SETUP & ENTRY:
-	// "Buy a break of the highest weekly high of the preceding 4 weeks"
-	// Use the breakout level as the signal price.
 	if candle.High.GreaterThan(highestHigh) {
 		signals = append(signals, types.NewSignal(
 			candle.Ticker,
@@ -50,8 +35,6 @@ func (s *Strategy) OnCandle(candle types.Candle) []types.Signal {
 			"Break of highest weekly high of preceding 4 weeks (entry/stop-and-reverse BUY)",
 			candle.Timestamp,
 		))
-		// Also set the stop loss
-		s.stopLoss[candle.Ticker] = candle.Close.Sub(calcATR(hist, 20).Mul(decimal.NewFromFloat(2)))
 	}
 
 	if candle.Low.LessThan(lowestLow) {
@@ -62,21 +45,7 @@ func (s *Strategy) OnCandle(candle types.Candle) []types.Signal {
 			"Break of lowest weekly low of preceding 4 weeks (entry/stop-and-reverse SELL)",
 			candle.Timestamp,
 		))
-		// Reset/flip stop loss here if you set one for shorts
-		s.stopLoss[candle.Ticker] = decimal.Zero
 	}
-	//else if candle.Close.LessThan(s.stopLoss[candle.Ticker]) {
-	//	// ATR stop-loss exit
-	//	signals = append(signals, types.NewSignal(
-	//		candle.Ticker,
-	//		types.SideTypeSell,
-	//		s.stopLoss[candle.Ticker], // stop level
-	//		"ATR(20) stop-loss SELL",
-	//		candle.Timestamp,
-	//	))
-	//	s.stopLoss[candle.Ticker] = decimal.Zero
-	//}
-
 	return signals
 }
 
