@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -33,12 +34,12 @@ func (db *Database) GetAggregates(assetId int, ticker string, interval types.Int
 	candles, err := db.candles.GetAggregates(ctx, args)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNoCandles
+			return nil, fmt.Errorf("%s: %w", ticker, ErrNoCandles)
 		}
 		return nil, err
 	}
 	if len(candles) == 0 {
-		return nil, ErrNoCandles
+		return nil, fmt.Errorf("%s: %w", ticker, ErrNoCandles)
 	}
 	return convertCandles(candles, interval, ticker), nil
 }
