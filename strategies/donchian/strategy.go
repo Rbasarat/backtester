@@ -18,31 +18,31 @@ func (s *Strategy) Init(api engine.PortfolioApi) error {
 
 func (s *Strategy) OnCandle(candle types.Candle, contexts map[types.Interval][]types.Candle) []types.Signal {
 
-	if len(contexts[types.Week]) < 4 {
+	if len(contexts[types.Day]) < 20 {
 		return nil
 	}
-
-	last4Weeks := contexts[types.Week][len(contexts[types.Week])-4:]
-	highestHigh, lowestLow := donchianHighLow(last4Weeks)
+	
+	last20Days := contexts[types.Day][len(contexts[types.Day])-20:]
+	highestHigh, lowestLow := donchianHighLow(last20Days)
 
 	var signals []types.Signal
 
-	if candle.High.GreaterThan(highestHigh) {
+	if candle.Close.GreaterThan(highestHigh) {
 		signals = append(signals, types.NewSignal(
 			candle.Ticker,
 			types.SideTypeBuy,
 			highestHigh, // breakout level
-			"Break of highest weekly high of preceding 4 weeks (entry/stop-and-reverse BUY)",
+			"Break of highest weekly high of preceding 4 weeks",
 			candle.Timestamp,
 		))
 	}
 
-	if candle.Low.LessThan(lowestLow) {
+	if candle.Close.LessThan(lowestLow) {
 		signals = append(signals, types.NewSignal(
 			candle.Ticker,
 			types.SideTypeSell,
 			lowestLow, // breakout level
-			"Break of lowest weekly low of preceding 4 weeks (entry/stop-and-reverse SELL)",
+			"Break of lowest weekly low of preceding 4 weeks",
 			candle.Timestamp,
 		))
 	}
