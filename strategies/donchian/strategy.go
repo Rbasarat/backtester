@@ -18,40 +18,43 @@ func (s *Strategy) Init(api engine.PortfolioApi) error {
 }
 
 func (s *Strategy) OnCandle(candle types.Candle, contexts map[types.Interval][]types.Candle) []types.Signal {
+	daily := contexts[types.Week]
 
-	if len(contexts[types.Day]) < 20 {
+	// Need at least 20 for 20d high/low, and at least 15 for ATR(14) (period+1)
+	if len(daily) < 4 {
 		return nil
 	}
 
-	last20Days := contexts[types.Day][len(contexts[types.Day])-20:]
-	highestHigh, _ := donchianHighLow(last20Days)
-	_, lowestLow := donchianHighLow(contexts[types.Day][len(contexts[types.Day])-10:])
+	last20Days := daily[len(daily)-4:]
+	highestHigh20, lowestLow20 := donchianHighLow(last20Days)
 
 	var signals []types.Signal
 
-	if candle.Close.GreaterThan(highestHigh) {
+	// BUY breakout + new filter
+	if candle.High.GreaterThan(highestHigh20) {
 		signals = append(signals, types.NewSignal(
 			candle.Ticker,
 			types.SideTypeBuy,
-			highestHigh, // breakout level
-			"Break of highest weekly high of preceding 4 weeks",
+			highestHigh20, // breakout level
+			fmt.Sprintf("Breakout + filter: (Close-20dLow)"),
 			candle.Timestamp,
 		))
 	}
 
-	if candle.Close.LessThan(lowestLow) {
+	// SELL breakout unchanged
+	if candle.Low.LessThan(lowestLow20) {
 		signals = append(signals, types.NewSignal(
 			candle.Ticker,
 			types.SideTypeSell,
-			lowestLow, // breakout level
+			lowestLow20, // breakout level
 			"Break of lowest weekly low of preceding 4 weeks",
 			candle.Timestamp,
 		))
 	}
+
 	return signals
 }
 
-// Utility: Donchian Channel High/Low
 func donchianHighLow(candles []types.Candle) (decimal.Decimal, decimal.Decimal) {
 	if len(candles) == 0 {
 		return decimal.Zero, decimal.Zero

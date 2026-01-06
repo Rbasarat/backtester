@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"os"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 type Engine struct {
@@ -137,38 +139,48 @@ func (e *Engine) Run() error {
 
 func (e *Engine) loadFeedData() error {
 	ctx := context.Background()
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.SetLimit(2)
 
 	for _, instrument := range e.backtester.instruments {
-		asset, err := e.db.GetAssetByTicker(instrument.ticker, ctx)
-		if err != nil {
-			return err
-		}
-		cs, err := e.db.GetAggregates(asset.Id, asset.Ticker, instrument.interval, instrument.start, instrument.end, ctx)
-		if err != nil {
-			return err
-		}
-		instrument.primary.candles = cs
-	}
-	return nil
-}
-
-func (e *Engine) loadContextData() error {
-	ctx := context.Background()
-
-	for _, instrument := range e.backtester.instruments {
-		for i, config := range instrument.context {
+		eg.Go(func() error {
 			asset, err := e.db.GetAssetByTicker(instrument.ticker, ctx)
 			if err != nil {
 				return err
 			}
-			cs, err := e.db.GetAggregates(asset.Id, asset.Ticker, config.interval, instrument.start, instrument.end, ctx)
+			cs, err := e.db.GetAggregates(asset.Id, asset.Ticker, instrument.interval, instrument.start, instrument.end, ctx)
 			if err != nil {
 				return err
 			}
-			instrument.context[i].candles = cs
+			instrument.primary.candles = cs
+			return nil
+		})
+	}
+	return eg.Wait()
+}
+
+func (e *Engine) loadContextData() error {
+	ctx := context.Background()
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.SetLimit(2)
+
+	for _, instrument := range e.backtester.instruments {
+		for i, config := range instrument.context {
+			eg.Go(func() error {
+				asset, err := e.db.GetAssetByTicker(instrument.ticker, ctx)
+				if err != nil {
+					return err
+				}
+				cs, err := e.db.GetAggregates(asset.Id, asset.Ticker, config.interval, instrument.start, instrument.end, ctx)
+				if err != nil {
+					return err
+				}
+				instrument.context[i].candles = cs
+				return nil
+			})
 		}
 	}
-	return nil
+	return eg.Wait()
 }
 func (e *Engine) loadExecutionFeedData() error {
 	ctx := context.Background()
